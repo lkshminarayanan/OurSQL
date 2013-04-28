@@ -10,7 +10,7 @@
 
 #include "Table.h"
 #include "globals.h"
-
+#include "datamodels/DataBaseHeader.h"
 
 namespace dbEngine {
 
@@ -20,12 +20,15 @@ class DataBaseServer {
 private:
 
 public:
-
+	bool valid;
+	DataBaseHeader *dbh;
 	Table *SysTable;
 	Table *SysColumn;
 	Table *SysIndex;
 
 	int numOfTables;
+
+	bool isValid();
 
 	/*
 	 * SysTable : tID, tName, noOfAttr, recs, startDirPage, maxColSize : 1, 2, 2, 2, 2

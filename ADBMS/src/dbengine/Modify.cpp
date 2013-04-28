@@ -39,6 +39,7 @@ Record* Modify::updateRecord(Record* record){
 		pos = values[i].second;
 		record->modifyRecord(pos,values[i].first);
 	}
+	lg("updating rec");
 	return record;
 }
 

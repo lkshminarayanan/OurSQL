@@ -5,24 +5,33 @@ namespace datamodels {
 
 char* DBName;
 
-Cache::Cache() {
+Cache::Cache(char* fileName, bool newFile) {
 	// TODO Auto-generated constructor stub
-	string fn = DBName;
+	string fn = fileName;
 	string DBpath = "/home/latchu/Documents/ADBMS/"+fn+".db";
-	if(isDBExists(DBpath)){
-		db.open(DBpath.c_str(),ios::binary | ios::out | ios::in );
-		char *buf = new char[pageSize];
-		db.read(buf,pageSize);
-		memcpy(&pageNum,buf,sizeof(pageNum));
-		lg("DB Loaded. PageNum : " << pageNum);
+
+	if(!newFile){
+		if(isDBExists(DBpath)){
+			db.open(DBpath.c_str(),ios::binary | ios::out | ios::in );
+			lg("DB Loaded.");
+		}else{
+			lg("Invalid Database Name");
+			pageNum = -1;
+		}
 	}else{//create new
-		creat(DBpath.c_str(), S_IRWXU);
-		db.open(DBpath.c_str(),ios::binary | ios::out | ios::in );
-		pageNum = 1;
-		char *buf = new char[pageSize];
-		memcpy(buf,&pageNum,sizeof(pageNum));
-		db.write(buf,pageSize);
-		lg( "DB created");
+		if(isDBExists(DBpath)){
+			//file already exists.cannot be created
+			lg("Cannot create DB. Database Name Conflict");
+			pageNum = -1;
+		}else{
+			creat(DBpath.c_str(), S_IRWXU);
+			db.open(DBpath.c_str(),ios::binary | ios::out | ios::in );
+			pageNum = 1;
+			//		char *buf = new char[pageSize];
+			//		memcpy(buf,&pageNum,sizeof(pageNum));
+			//		db.write(buf,pageSize);
+			lg( "DB created");
+		}
 	}
 }
 
@@ -31,16 +40,23 @@ Cache::Cache() {
 //	Cache();
 //}
 //
-int Cache::openFile(char* filename){
-	DBName = filename;
-	return 1;
-}
 
 Cache* Cache::cacheInstance = NULL;
 
+int Cache::createCache(char* fileName, bool newFile){
+	//called first time exclusively by database header!
+	cacheInstance = new Cache(fileName,newFile);
+	if(cacheInstance->pageNum == -1)
+		return -1;
+	return 1;
+}
+
+void Cache::setPageNum(long pid){
+	pageNum = pid;
+}
+
 Cache* Cache::getInstance(){
-	if(cacheInstance == NULL)
-		cacheInstance = new Cache();
+	//called every other time
 	return cacheInstance;
 }
 

@@ -107,10 +107,12 @@ void Select::resetMoreFlag(){
 }
 
 void Select::logDetails(){
+	cout << endl << "Select Details :";
 	cout << endl << "DirPage : "<<dirpid;
 	cout << endl << "DirPageSlotID : "<<datapageDirEntryid;
 	cout << endl << "Slot ID : "<<slotid;
-	cout << endl << "LIMIT : "<<limit;
+	cout << endl << "Number of Columns to retrieve : "<<numOfColumns;
+	cout << endl << "LIMIT : "<<limit<<flush;
 }
 
 void Select::initializeStartParams(){

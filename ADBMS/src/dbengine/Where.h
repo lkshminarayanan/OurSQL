@@ -47,7 +47,7 @@ public:
 class Where{
 
 private:
-	int operatorType[5];
+	int operatorType[5];//max constarints
 	/*
 	 * 0 - first constraint
 	 * 1 - AND
@@ -57,6 +57,7 @@ private:
 	vector<WhereCond*> where;
 public:
 	Where();
+	Where(WhereCond *firstWhere);
 	~Where();
 
 	bool testRecord(Record *r);

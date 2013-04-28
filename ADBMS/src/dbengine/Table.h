@@ -17,6 +17,7 @@
 #include "Modify.h"
 #include <time.h>
 #include <ctime>
+#include <algorithm>
 
 using namespace datamodels;
 
@@ -34,6 +35,7 @@ private :
 	DirPage *tHeader;
 	int numOfAttrColumns;
 	long tID;
+	long numOfRows;
 
 	DataBaseServer* dbs;
 
@@ -45,22 +47,29 @@ public:
 	virtual ~Table();
 
 	char* getTableName();
-	char** getAttributeNames();
-	int* getAttributeTypes();
+	vector<char*> getAttributeNames();
+	vector<int> getAttributeTypes();
 	int getNumOfAttr();
 	DirPage* getDirPageHeader();
+	vector<string> getAttributeNamesString();
 
 	int dropTable(); //TODO
 	int alterTable(); //TODO
 
 	RecordSet* selectTuples();
 	RecordSet* selectTuples(Select *select, Where *where);
+	RecordSet* selectTuples(int type,vector<char*> selectColumNames);//prepares select and where and calls the above select internally
+
 	int insertTuples(RecordSet* rs);
+	int insertTuples(vector<char*> aName,vector<char*> value);
+	int insertTuples(char* tName,RecordSet* rs);//insert directly with table name.
+
 	long deleteTuples(Where *where,int* attrType, int numOfAttr);
 	long updateTuples(Where *where, Modify* modify); //TODO
 
 	int createIndex(int attrID); //TODO
 
+	long getNumOfRows();
 
 };
 

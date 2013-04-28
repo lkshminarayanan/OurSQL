@@ -33,15 +33,18 @@ private:
 	long pageNum;
 //	string DBName;
 	static Cache* cacheInstance;
+	Cache(char* fileName, bool newFile);
 	Cache();
 
 public:
 
 	static Cache* getInstance();
-	static int openFile(char* filename);
+	static int createCache(char* fileName, bool newFile);
 	virtual ~Cache();
 
 	int getNewPage();
+
+	void setPageNum(long pid);
 
 	char* readPage(long);
 	int writePage(long pageid, char* page);

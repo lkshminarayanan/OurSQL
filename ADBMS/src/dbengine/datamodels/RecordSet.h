@@ -19,9 +19,11 @@ class Record;
 class RecordSet {
 private:
 	int *attrType;
+	vector<char*> attrName;
 	long numOfRecords;
 	int numOfAttr;
 	vector<Record*> records;
+	bool colNameExist;
 public:
 	RecordSet();
 	RecordSet(int* attrType, int numOfAttr);
@@ -39,6 +41,7 @@ public:
 
 	int getSizeOf(int recNo);
 
+	void setAttrName(vector<char*> aName);
 	void printAll(int start, int limit);
 };
 

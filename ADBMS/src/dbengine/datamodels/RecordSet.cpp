@@ -12,10 +12,11 @@ namespace datamodels {
 RecordSet::RecordSet() {}
 
 RecordSet::RecordSet(int *attrType,int numOfAttr) {
-	// TODO Auto-generated constructor stub
+
 	this->attrType = attrType;
 	this->numOfAttr = numOfAttr;
 	numOfRecords = 0;
+	colNameExist = false;
 }
 
 RecordSet::RecordSet(vector<int> attrT, int numOfAttr){
@@ -27,6 +28,7 @@ RecordSet::RecordSet(vector<int> attrT, int numOfAttr){
 		newAttr[i] = attrT[i];
 	}
 	this->attrType = newAttr;
+	colNameExist = false;
 }
 
 RecordSet::~RecordSet() {
@@ -76,11 +78,17 @@ vector<Record*> RecordSet::getRecords(int start,int limit){
 }
 
 void RecordSet::printAll(int start, int limit){
+
+	if(numOfRecords==0){
+		cout << endl << "No Records Found.";
+		return;
+	}
 	cout << endl<< "Total Records : " << numOfRecords;
 	cout << endl<< "Columns : " << numOfAttr;
 	cout << endl<< "Attribute Types : ";
 	int i;
 	for(i = 0;i<numOfAttr;i++){
+		cout<<i+1<<"-";
 		switch(attrType[i]){
 		case 1:
 			cout << "varchar\t";
@@ -91,17 +99,27 @@ void RecordSet::printAll(int start, int limit){
 		case 3:
 			cout << "real\t";
 			break;
+		default:
+			cout << "error-type-"<<attrType[i]<<"\t";
+			break;
 		}
 	}
 	cout << endl;
-	for(i = 0;i<numOfAttr;i++){
-		cout << "Column "/*attrName[i]*/ << i+1 <<"\t\t";
+	if(colNameExist){
+		for(i = 0;i<numOfAttr;i++){
+			cout << attrName[i] <<"\t\t";
+		}
+	}else{
+		for(i = 0;i<numOfAttr;i++){
+			cout << "Col"<<i+1 <<"\t\t";
+		}
 	}
 	cout << endl;
 	int j;
 	int end = start + limit;
 	for(i = 0;i<numOfRecords;i++){
 		for(j=0;j<numOfAttr;j++){
+			//cout << "here here";cout.flush();
 			vector<char*> val = records[i]->getValues();
 			cout << val[j] << "\t\t";
 		}
@@ -117,6 +135,9 @@ int RecordSet::getSizeOf(int recNo){
 	return records[recNo]->getSize();
 }
 
-
+void RecordSet::setAttrName(vector<char*> aName){
+	attrName = aName;
+	colNameExist = true;
+}
 
 } /* namespace datamodels */

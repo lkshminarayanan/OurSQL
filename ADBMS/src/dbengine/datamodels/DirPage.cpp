@@ -10,7 +10,6 @@
 namespace datamodels {
 
 DirPage::DirPage() {
-	cout << endl << "Creating Dir Page";
 	nextPage = 0;
 	prevPage = 0;
 	maxSpaceAvailable = 0;

@@ -11,40 +11,71 @@ namespace datamodels {
 
 DataBaseHeader::DataBaseHeader(){}
 
-DataBaseHeader::DataBaseHeader(bool newFile){
+DataBaseHeader::DataBaseHeader(char* fileName, bool newFile){
 	// TODO New Page. initialize dp obj and write it to page.
-	noOfTables = 0;
-	noOfPages = 1;
-	memcpy(p,this,sizeof(DataPage));
-	writePage();
+	if(newFile){
+		noOfTables = 0;
+		noOfPages = 1;
+		//start the cache;
+		int stat = Cache::createCache(fileName,newFile);
+		if(stat == -1)
+			noOfPages = -1;
+		else{
+			writeToPage();
+		}
+	}else{
+		int stat = Cache::createCache(fileName,newFile);
+		if(stat == -1)
+			noOfPages = -1;
+		else{
+			Cache *c = Cache::getInstance();
+			char *p = c->readPage(0);
+			DataBaseHeader *dbh = (DataBaseHeader*)p;
+			noOfTables = dbh->noOfTables;
+			noOfPages = dbh->noOfPages;
+			c->setPageNum(noOfPages);
+		}
+	}
+	if(noOfPages != -1){
+		lg("@DBHeader : DB Loaded. Pages-"<<noOfPages<<". Tables-"<<noOfTables);
+	}
+
 }
 
-DataPage::DataPage(long pid):Page(pid){
-	DataPage* dp;
-	char* buf = new char[sizeof(DataPage)];
-	memcpy(buf,p,sizeof(DataPage));
-	dp = (DataPage*)buf;
-	totalSlots = dp->totalSlots;
-	totalRecords = dp->totalRecords;
-	totalFreeSize = dp->totalFreeSize;
-	contigFreeSize = dp->contigFreeSize;
-	contigFreeSpaceStart = dp->contigFreeSpaceStart;
-	c = p + sizeof(DataPage);
-	printDetails();
-}
-
-
-
-DataPage::~DataPage() {
+DataBaseHeader::~DataBaseHeader() {
 	// TODO Auto-generated destructor stub
 	writeToPage();
-	delete [] p;
 }
 
-void DataPage::writeToPage(){
-	memcpy(p,this,sizeof(DataPage));
-	writePage();
+long DataBaseHeader::getNoOfPages(){
+	return noOfPages;
+}
+
+long DataBaseHeader::getNoOfTables(){
+	return noOfTables;
+}
+
+void DataBaseHeader::updateTableCount(){
+	noOfTables ++;
+}
+
+void DataBaseHeader::writeToPage(){
+	char* p = new char[pageSize];
+	Cache *cache = Cache::getInstance();
+	noOfPages = cache->getPageNum();
+	memcpy(p,this,sizeof(DataBaseHeader));
+	lg("Updating DBHeader : PgNo -"<<noOfPages<<" TblNo"<<noOfTables);
+	cache->writePage(0,p);
 }
 
 
 } /* namespace datamodels */
+
+//using namespace datamodels;
+//int main(){
+//	DataBaseHeader *db = new DataBaseHeader("Temp",false);
+//	cout << cout<<db->getNoOfPages();
+//	db->updateTableCount();
+//	db->writeToPage();
+//}
+

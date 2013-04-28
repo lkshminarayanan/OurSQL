@@ -331,8 +331,8 @@ int DataPage::retrieveRecords(RecordSet *rs,Select* select,Where* where){
 	char *recStr;
 	Record *record;
 	int noOfRecs = 0;
-	int *attrType_table = rs->getAttrType();
-	int numOfAttr_table = rs->getNumOfAttr();
+	int *attrType_table = select->getTableAttrType();
+	int numOfAttr_table = select->getTableNumOfAttr();
 	for(int i=select->getStartSlotId();i<=totalSlots;i++){
 		recSize = retrieveRecord(i,recStr);
 		if (recSize!=0){
@@ -340,6 +340,7 @@ int DataPage::retrieveRecords(RecordSet *rs,Select* select,Where* where){
 			//TODO : check for valid records here!
 			if(where->testRecord(record)){
 				lg2("Adding Record "<<i<<" from Page "<<pageid);
+				//select->logDetails();
 				rs->addRecord(select->project(record));
 				noOfRecs ++;
 			}

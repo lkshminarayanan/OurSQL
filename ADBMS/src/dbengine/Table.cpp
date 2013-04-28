@@ -20,14 +20,7 @@ Table::Table(int pid, bool createNew){
 		tHeader = new DirPage(pid);
 	}
 	switch (pid) {
-	case 1:
-		//		char *names[18] = {
-		//				"TID","TABLE NAME", "No of Columns", "Records", "start Dir Page",  "Max COl Size"
-		//		};
-		//		for(int i = 0;i<6;i++)
-		//			attrName.push_back("TID");
-		//			attrName
-		/* no break */
+	case 1:/* no break */
 	case 2:
 		attrType.push_back(2);
 		attrType.push_back(1);
@@ -41,7 +34,7 @@ Table::Table(int pid, bool createNew){
 		attrType.push_back(2);
 		attrType.push_back(2);
 		attrType.push_back(2);
-		numOfAttrColumns = 6;
+		numOfAttrColumns = 3;
 		break;
 	}
 }
@@ -49,12 +42,15 @@ Table::Table(int pid, bool createNew){
 Table::Table(char* tName, DataBaseServer* db){
 	//search in SYSCOlUMN and load the dirpage.
 	//	RecordSet *rs = sys_tbl->selectTuples();
+	this->tName = new char[strlen(tName)];
+	strcpy(this->tName,tName);
+
 	WhereCond *wc = new WhereCond(1,1,0,tName);
 	Where *w = new Where();
 	w->addCondition(0,wc);
 	RecordSet *rs = db->SysTable->selectTuples(new Select(),w);
 	vector<Record*>  recs= rs->getAllRecords();
-//	rs->printAll(0,10);
+	//	rs->printAll(0,10);
 	Record *r;
 	long pid;
 	vector<char*> sysTres;
@@ -62,52 +58,67 @@ Table::Table(char* tName, DataBaseServer* db){
 		r = recs[0];
 		sysTres = r->getValues();
 		pid = atol(sysTres[4]);
+		//numOfRows = atol(sysTres[3]);
+		tHeader = new DirPage(pid);
+		dbs = db;
+
+		WhereCond *wc2 = new WhereCond(0,2,0,sysTres[0]);
+		Where *ww = new Where();
+		ww->addCondition(0,wc2);
+
+		rs = db->SysColumn->selectTuples(new Select(),ww);
+
+		//	rs->printAll(0,rs->getNumOfRecords());
+
+		numOfAttrColumns = atol(sysTres[2]);
+
+		vector<Record*> sysCres = rs->getAllRecords();
+
+		vector<char*> values;
+
+		/*
+		 * SysColumn : tID, colName , colID, maxSize, type, index : 2, 1, 2, 2, 2, 2
+		 */
+
+		for(int i=0;i<numOfAttrColumns;i++){
+			values = sysCres[i]->getValues();
+			attrName.push_back(values[1]);
+			attrType.push_back(atoi(values[4]));
+			maxColSize.push_back(atoi(values[3]));
+		}
+
+		tID = atoi(sysTres[0]);
+	}else{
+		tHeader = NULL;
 	}
-	tHeader = new DirPage(pid);
-	dbs = db;
 
-	WhereCond *wc2 = new WhereCond(0,2,0,sysTres[0]);
-	Where *ww = new Where();
-	ww->addCondition(0,wc2);
-
-	rs = db->SysColumn->selectTuples(new Select(),ww);
-
-//	rs->printAll(0,rs->getNumOfRecords());
-
-	numOfAttrColumns = atol(sysTres[2]);
-
-	vector<Record*> sysCres = rs->getAllRecords();
-
-	vector<char*> values;
-
-	/*
-	 * SysColumn : tID, colName , colID, maxSize, type, index : 2, 1, 2, 2, 2, 2
-	 */
-
-	for(int i=0;i<numOfAttrColumns;i++){
-		values = sysCres[i]->getValues();
-		attrName.push_back(values[1]);
-		attrType.push_back(atoi(values[4]));
-		maxColSize.push_back(atoi(values[3]));
-	}
-
-	tID = atoi(sysTres[0]);
 }
 
 Table::Table(char *tableName,vector<char*> attrName, vector<int> maxSize, vector<int> attrType, DataBaseServer* db){//creating new table
-
-	//prepare a record about the table and insert into sys_table
-	dbs = db;
-	numOfAttrColumns = attrName.size();
-	DirPage *dp = new DirPage();
-	tID = dbs->addToSysTable(tableName,numOfAttrColumns,dp->getPageid());
-	this->attrName = attrName;
-	this->attrType = attrType;
-	this->maxColSize = maxSize;
-
-	for(int i = 0; i< numOfAttrColumns;i++){
-		dbs->addToSysColumn(tID, attrName[i],i,maxSize[i],attrType[i],0);
+	//check if table with same name exists..
+	RecordSet *rs;
+	WhereCond *wc = new WhereCond(1,1,0,tableName);
+	rs = db->SysTable->selectTuples(new Select(),new Where(wc));
+	if(rs->getNumOfRecords()==0){
+		//prepare a record about the table and insert into sys_table
+		dbs = db;
+		numOfAttrColumns = attrName.size();
+		tHeader = new DirPage();
+		//	cout << "Created DP :"<<dp->getPageid();
+		tID = dbs->addToSysTable(tableName,numOfAttrColumns,tHeader->getPageid());
+		this->attrName = attrName;
+		this->attrType = attrType;
+		this->maxColSize = maxSize;
+		for(int i = 0; i< numOfAttrColumns;i++){
+			dbs->addToSysColumn(tID, attrName[i],i,maxSize[i],attrType[i],0);
+		}
+	}else{
+		tHeader = NULL;
 	}
+
+	this->tName = new char[strlen(tableName)];
+	strcpy(this->tName,tableName);
+
 
 }
 
@@ -117,7 +128,23 @@ RecordSet* Table::selectTuples(){
 
 RecordSet* Table::selectTuples(Select *select,Where *where){
 	DirPage *dp;
-	RecordSet *rs = new RecordSet(attrType,numOfAttrColumns);
+	RecordSet *rs;
+	if(select->getNumOfAttr()==0){
+		int pos[1];//dummy
+		int *arrAttr = new int[numOfAttrColumns];
+
+		for(int i = 0;i<numOfAttrColumns;i++){
+			arrAttr[i] = attrType[i];
+		}
+		select = new Select(pos,0,arrAttr,numOfAttrColumns);
+		rs = new RecordSet(attrType,numOfAttrColumns);
+	}else{
+		rs = new RecordSet(select->getAttrType(),select->getNumOfAttr());
+	}
+
+	if(tHeader->getPageid()>3)//valid attrNames oly for normal tables
+		rs->setAttrName(attrName);
+
 	long startDirPageID = select->getStartDirPageID();
 	if(startDirPageID == 0)
 		dp = tHeader;
@@ -134,6 +161,32 @@ RecordSet* Table::selectTuples(Select *select,Where *where){
 		}
 	}while(dp!=NULL);
 	return rs;
+}
+
+RecordSet* Table::selectTuples(int type,vector<char*> selectColumNames){
+	int i,j;
+	int selectColumns = 0;
+	int *pos;
+	int *attrTypeArr = new int[numOfAttrColumns];
+
+	for(int i = 0;i<numOfAttrColumns;i++){
+		attrTypeArr[i] = attrType[i];
+	}
+	switch(type){
+	case 1://select
+		selectColumns = selectColumNames.size();
+		pos = new int[selectColumns];
+		for(i=0;i<selectColumns;i++){
+			for(j=0;j<numOfAttrColumns;j++){
+				if(strcmp(attrName[j],selectColumNames[i])==0){
+					pos[i] = j;
+					break;
+				}
+			}
+		}
+		break;
+	}
+	return selectTuples(new Select(pos,selectColumns,attrTypeArr,numOfAttrColumns),new Where());
 }
 
 int Table::insertTuples(RecordSet *rs){
@@ -167,8 +220,49 @@ int Table::insertTuples(RecordSet *rs){
 		}
 	}while(recsInserted < rs->getNumOfRecords());
 	//TODO:update systable
+	/*if(tHeader->getPageid()>=4){
+		cout << "searching for "<<tName<<endl;
+		Where* w = new Where(new WhereCond(1,1,0,tName));
+		Modify* m = new Modify(rs->getAttrType(),numOfAttrColumns);
+		numOfRows += recsInserted;
+		char* inputChar = new char[sizeof(long)];
+		sprintf(inputChar,"%ld",numOfRows);
+		cout << "toup " << inputChar;
+		m->addUpdatedValues(inputChar,3);
+		cout << dbs->SysTable->updateTuples(w,m) << " rows updated";
+	}*/
 	return recsInserted;
 }
+
+int Table::insertTuples(vector<char*> aName,vector<char*> values){
+	//check the order of the entry.
+	int i,j;
+	/*char **valuesArr =new char*[numOfAttrColumns];
+	for(i = 0; i < numOfAttrColumns; ++i)
+		valuesArr[i] = new char[100];*/
+	int pos;
+	Record *r = new Record();
+	for(i=0;i<numOfAttrColumns;i++){
+		pos = -1;
+		for(j=0;j<aName.size();j++){
+			if(strcmp(attrName[i],aName[j])==0){
+				pos = j;
+				break;
+			}
+		}
+		if(pos!=-1){
+			r->addValue(values[pos],attrType[i]);
+		}else
+			r->addValue("",attrType[i]);
+	}
+
+	RecordSet *rs;
+
+	rs = new RecordSet(attrType,numOfAttrColumns);
+	rs->addRecord(r);
+	return insertTuples(rs);
+}
+
 
 long Table::deleteTuples(Where* where, int* attrType, int numOfAttr){
 	DirPage* dp = tHeader;
@@ -182,7 +276,8 @@ long Table::deleteTuples(Where* where, int* attrType, int numOfAttr){
 }
 
 long Table::updateTuples(Where *where,Modify* modify){
-	DirPage* dp = tHeader, *old;
+	DirPage* dp = tHeader;
+	DirPage* old;
 	long noOfRecs = 0;
 	RecordSet *rs;
 	while(dp != NULL){
@@ -200,123 +295,33 @@ long Table::updateTuples(Where *where,Modify* modify){
 	return noOfRecs;
 }
 
+DirPage* Table::getDirPageHeader(){
+	return this->tHeader;
+}
+
+int Table::getNumOfAttr(){
+	return numOfAttrColumns;
+}
+
+vector<char*> Table::getAttributeNames(){
+	return attrName;
+}
+
+vector<string> Table::getAttributeNamesString(){
+	vector<string> attrNameS;
+	for(int i =0;i<numOfAttrColumns;i++){
+		attrNameS.push_back(attrName[i]);
+	}
+	return attrNameS;
+}
+
+long Table::getNumOfRows(){
+	return numOfRows;
+}
+
+vector<int> Table::getAttributeTypes(){
+	return attrType;
+}
+
 } /* namespace datamodels */
 
-using namespace datamodels;
-int main(){
-//	Record *r = new Record();
-//	r->addValue("9994",2);
-//	r->addValue("8888",2);
-//	r->addValue("443.99995",3);
-//	r->addValue("lakshmi",1);
-//
-//
-//
-//	Record *r1 = new Record();
-//	r1->addValue("443",2);
-//	r1->addValue("9600",2);
-//	r1->addValue("223.99995",2);
-//	r1->addValue("Narayanan",2);
-//
-//
-//	int a[4] = {2,2,3,1};
-//	//
-//	RecordSet *rs;
-//	//
-//	double x = 0;
-//
-	DataBaseServer *dbs = new DataBaseServer("sample",false);
-//	vector<char*> aName;
-//	vector<int> maxSize, aType;
-//	aName.push_back("Name");  maxSize.push_back(30); aType.push_back(1);
-//	aName.push_back("Age");  maxSize.push_back(3); aType.push_back(2);
-//	aName.push_back("Grade"); maxSize.push_back(2); aType.push_back(3);
-//	Table *tbl = new Table("Lakshmi Abi", aName, maxSize, aType,dbs);
-
-
-	dbs->showTables();
-
-//	Table *tbl = new Table("England",dbs);
-
-
-
-	//			DirPage *dp = new DirPage(2);
-	//			int a1[] = {2,1,2,2,2,2};
-	//			rs = new RecordSet(a1,6);
-	//			dp->retrieveRecords(rs,new Select(),new Where());
-	//			rs->printAll(0,100);
-
-	//	rs = new RecordSet(a1,6);
-	//	DataPage *dap = new DataPage(5);
-	//	dap->retrieveRecords(rs,new Select(),new Where());
-	//	rs->printAll(0,100);
-
-
-
-	//	DirPage *c = new DirPage();
-	//	cout << c->getPageid();
-	//	Table *tbl = new Table(1,false);
-
-	/*	rs = new RecordSet(a,4);
-		for(int i = 0 ;i<5;i++){
-			rs->addRecord(r);
-			rs->addRecord(r1);
-		}
-
-		for(int i = 0;i<4;i++){
-			x += tbl->insertTuples(rs);
-		}
-
-		lg("Total Records : "<<x);*/
-//	x = 0;
-//	clock_t tStart = clock();
-//
-//	RecordSet *rr;
-//	//
-//	rr = tbl->selectTuples(new Select(),new Where());
-//	x += rr->getNumOfRecords();
-//	cout << endl << "Total Records : "<<x;
-//
-//	rr->printAll(0,100);
-	//
-	//
-	//	printf("\nTime taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
-
-	//	/*
-	//	 * Delete Test Case
-	//	 tbl->deleteTuples(w,a,4);
-	//
-	//
-	//	x= 0;
-	//
-	//	do{
-	//		rr = tbl->selectTuples(s,w);
-	//		x += rr->getNumOfRecords();
-	//		//		s->logDetails();
-	//	}while(s->isThereMore());
-	//	cout << endl << "Total Records : "<<x;
-	//
-	//
-	//	 */
-	//
-	//	x = 0;
-	//
-	//	Modify * m = new Modify(a,4);
-	//	m->addUpdatedValues("india",3);
-	//
-	//	w->addCondition(0,wc);
-	//	w->addCondition(2,new WhereCond(3,1,0,"india"));
-	//
-	//	cout << endl << "Modified Records : "<<tbl->updateTuples(w,m);
-	//
-	//	do{
-	//		rr = tbl->selectTuples(s,new Where());
-	//		x += rr->getNumOfRecords();
-	//		//		s->logDetails();
-	//	}while(s->isThereMore());
-	//	cout << endl << "Total Records : "<<x;
-	//
-	//	rr->printAll(0,100);
-
-	return 1;
-}
