@@ -8,7 +8,7 @@ char* DBName;
 Cache::Cache(char* fileName, bool newFile) {
 	// TODO Auto-generated constructor stub
 	string fn = fileName;
-	string DBpath = "/home/latchu/Documents/ADBMS/"+fn+".db";
+	string DBpath = dirpath+fn+".db";
 
 	if(!newFile){
 		if(isDBExists(DBpath)){

@@ -11,7 +11,6 @@
 namespace dbEngine {
 
 Parser::Parser() {
-	// TODO Auto-generated constructor stub
 	dbs = NULL;
 }
 
@@ -156,6 +155,9 @@ int Parser::parse(string stmt){
 			actUpon(3,tokens);
 		else if((tokens[1].compare("columns")==0)&&(tokens[2].compare("from")==0)&&tokens.size()==4&&isAlpha(tokens[3])){
 			actUpon(10,tokens);
+		}
+		else if(tokens[1].compare("databases")==0&&tokens.size()==2){
+			actUpon(11,tokens);
 		}
 		else{
 			cmderror;
@@ -363,8 +365,6 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					return;
 				}
 
-				//TODO:find the order of the ipNames;
-
 				if(hasColumnNames){
 					//the column names were given
 					for(int k=0;k<ipNum;k++){
@@ -394,8 +394,10 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				int k;
 				char *data;
 
+
+				i++;//skip "values"
 				do{//it comes here iff its value;
-					if(tokens[++i][0]!='('){
+					if(tokens[i][0]!='('){
 						cmderror;
 						return;
 					}
@@ -403,25 +405,29 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					values.clear();
 
 					k = 0;
+					int toklen;
 
 					do{
 						i++;
 						switch(attrType[(hasColumnNames)?pos[k]:k]){
 						case 1:
-							if(!isAlpha(tokens[i])){
-								cout << "Invalid Valuesa."<<tokens[i]<<endl;
+							toklen = tokens[i].length()-1;
+							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''||!isAlpha(tokens[i].substr(1,toklen-1))){
+								cout << "Invalid Values."<<endl;
 								return;
+							}else{
+								tokens[i]=tokens[i].substr(1,toklen-1);
 							}
 							break;
 						case 2:
 							if(!isInt(tokens[i])){
-								cout << "Invalid Value : "<<tokens[i]<<endl;
+								cout << "Invalid Values."<<endl;
 								return;
 							}
 							break;
 						case 3:
 							if(!isReal(tokens[i])){
-								cout << "Invalid Valuesr."<<tokens[i]<<endl;
+								cout << "Invalid Values."<<endl;
 								return;
 							}
 							break;
@@ -471,7 +477,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					}
 
 					if(i!=tokens.size()){
-						if(tokens[i++][0]!=','||tokens[i].compare("values")!=0){
+						if(tokens[i++][0]!=','){
 							cmderror;
 							return;
 						}
@@ -572,6 +578,25 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					cout << endl;
 				}
 			}
+		}
+		break;
+	case 11:
+		DIR *dir;
+		struct dirent *ent;
+		if ((dir = opendir (dirpath)) != NULL) {
+			/* print all the files and directories within directory */
+			string db;
+			while ((ent = readdir (dir)) != NULL) {
+				db = ent->d_name;
+				//cout << db << " "<<db.find(".db",3)<<" "<<db.size()-2<<endl;
+				if(db.size()>3&&(db.substr(db.size()-3)).compare(".db")==0)
+					cout << db.substr(0,db.size()-3) << endl;
+			}
+			closedir (dir);
+		} else {
+			/* could not open directory */
+			perror ("");
+			return;
 		}
 		break;
 

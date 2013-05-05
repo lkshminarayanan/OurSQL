@@ -13,6 +13,7 @@
 #include <sstream>
 #include <vector>
 #include "dbengine/Table.h"
+#include "dirent.h"
 
 #define cmderror cout<<"Please check your query syntax.(Debugging : Line-"<<__LINE__<<")"<<endl
 

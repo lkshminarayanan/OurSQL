@@ -8,6 +8,7 @@
 #include "../Modify.h"
 
 #define flag int
+#define dirpath "/home/latchu/Documents/ADBMS/"
 
 #if false//set true for debug on. false for debug false
 #define lg(x) cout << endl << x;cout.flush()
