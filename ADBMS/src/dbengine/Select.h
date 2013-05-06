@@ -38,6 +38,7 @@ private:
 public:
 	Select();
 	Select(int *pos,int numOfSelectAttributes,int *attrType, int totalAttributes);
+	Select(vector<int> pos,int numOfSelectAttributes,vector<int> attrType, int totalAttributes);
 	virtual ~Select();
 	Record* project(Record* actualRecord);
 

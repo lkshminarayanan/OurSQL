@@ -176,6 +176,14 @@ int Parser::parse(string stmt){
 		actUpon(6,tokens);
 	}
 
+	else if((tokens[0].compare("drop"))==0&&tokens.size()==3){
+		if(tokens[1].compare("database")==0)
+			actUpon(12,tokens);
+		else{
+			cmderror;
+		}
+	}
+
 	else{
 		//final catch
 		cmderror;
@@ -186,6 +194,8 @@ int Parser::parse(string stmt){
 
 void Parser::actUpon(int ch,vector<string> tokens){
 	char dbName[100];
+	Select *select = new Select();
+	Where *where = new Where();
 
 	/*cout<<endl<<"1.Create Database";
 	cout<<endl<<"2.Load Database";
@@ -495,6 +505,94 @@ void Parser::actUpon(int ch,vector<string> tokens){
 	case 6:
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
+
+		}else{
+			//cout << "Where "<< (std::find(tokens.begin(),tokens.end(),"where"))-tokens.begin();
+			vector<string>::iterator itPos;
+			char *tableName = new char[100];
+			int i;
+			vector<string> colNames;
+			vector<int> colTypes;
+			vector<int> pos;
+
+			itPos = std::find(tokens.begin(),tokens.end(),"from");
+			if(itPos ==tokens.end()){
+				//NO from.
+				cmderror;
+				return;
+			}
+			//valid from:
+			i = itPos - tokens.begin();
+
+
+			strcpy(tableName,tokens[++i].c_str());
+			Table *tbl = new Table(tableName,dbs);
+			if(tbl->getDirPageHeader()==NULL){
+				cout <<"Table does'nt exist."<<endl;
+				return;
+			}
+
+			//if table exists
+
+			colNames = tbl->getAttributeNamesString();
+			colTypes = tbl->getAttributeTypes();
+
+			i++;
+			if(i!=tokens.size()){//not the end
+				if(tokens[i].compare("where")==0){
+					//Where present;
+					//TODO:Analyze and store where
+				}else{
+					cmderror;
+					return;
+				}
+			}
+
+			//now for select;
+			if(tokens[1][0]=='*'){
+				if(tokens[2].compare("from")!=0){
+					//error syntax
+					cmderror;
+					return;
+				}
+			}
+
+			else if(tokens[1].compare("from")!=0){
+				i = 0;
+				do{
+					itPos = std::find(colNames.begin(),colNames.end(),tokens[++i]);
+					if(itPos == colNames.end()){
+						cout << "Invalid Column Names"<<endl;
+						return;
+					}else{
+						pos.push_back(itPos-colNames.begin());
+					}
+
+				}while(tokens[++i][0]==',');
+				if(tokens[i].compare("from")!=0){
+					cmderror;
+					return;
+				}
+
+				select = new Select(pos,pos.size(),colTypes,colTypes.size());
+
+			}
+
+			else{
+				cmderror;
+				return;
+			}
+
+			RecordSet *rs = tbl->selectTuples(select,where);
+			rs->printAll(0,rs->getNumOfRecords());
+
+
+
+		}
+		break;
+	case 7:
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
 		}else{
 			char *tableName = new char[100];
 			strcpy(tableName,tokens[3].c_str());
@@ -507,7 +605,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			}
 		}
 		break;
-	case 7:
+	case 8:
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
 		}else{
@@ -599,6 +697,27 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			return;
 		}
 		break;
+
+	case 12:
+		if(isAlpha(tokens[2])){
+			char *filepath = new char[300];
+			strcpy(filepath,dirpath);
+			strcat(filepath,tokens[2].c_str());
+			strcat(filepath,".db");
+			ifstream file(filepath);
+			if(file.is_open()){
+				file.close();
+				if(remove(filepath)==0){
+					cout <<"'"<< tokens[2]<<"' dropped."<<endl;
+				}else{
+					cout << "Error deleting "<<tokens[2]<<endl;
+				}
+			}else{
+				cout << "No such database exists."<<endl;
+			}
+		}
+		break;
+
 
 	default:
 		cmderror;

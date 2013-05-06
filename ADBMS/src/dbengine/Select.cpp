@@ -35,6 +35,25 @@ Select::Select(int *pos,int numOfColumns,int *tAttr, int totalAttrCount){
 	moreFlag = false;
 }
 
+Select::Select(vector<int> pos,int numOfColumns,vector<int> tAttr, int totalAttrCount){
+	this->pos = new int[numOfColumns];
+	memcpy(this->pos,pos.data(),sizeof(int)*numOfColumns);
+	this->t_AttrType = new int[totalAttrCount];
+	memcpy(this->t_AttrType,tAttr.data(),sizeof(int)*totalAttrCount);
+	this->numOfColumns = numOfColumns;
+	this->t_NumOfAttributes = totalAttrCount;
+	attrType = new int[numOfColumns];
+	for(int i = 0;i < numOfColumns; i++){
+		attrType[i] = t_AttrType[pos[i]];
+	}
+	limit = MAX_RETR_LIMIT;
+	slotid = 1;
+	datapageDirEntryid = 0;
+	dirpid = 0;
+	moreFlag = false;
+}
+
+
 Record* Select::project(Record* record){
 	if(numOfColumns == 0)
 		return record;

@@ -11,6 +11,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include "dbengine/Table.h"
 #include "dirent.h"
