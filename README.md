@@ -3,7 +3,7 @@ OurSQL
 
 An experimental attempt at creating a MySQL style Database Engine with an ultimate goal of learning the internals. 
 
-#TODO : 
+TODO : 
 
 1. Create a parser using proper lexx/yacc or boost.
 
