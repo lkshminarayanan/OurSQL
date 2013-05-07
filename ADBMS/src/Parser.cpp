@@ -537,11 +537,102 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			colNames = tbl->getAttributeNamesString();
 			colTypes = tbl->getAttributeTypes();
 
+			WhereCond *wc;
+			int op, toklen;
+			char *value = new char[100];
+			int WhereConjuction;
+
 			i++;
 			if(i!=tokens.size()){//not the end
 				if(tokens[i].compare("where")==0){
 					//Where present;
 					//TODO:Analyze and store where
+					if(i+1==tokens.size()){
+						cmderror;
+						return;
+					}
+					do{
+						if(tokens[i].compare("where")){
+							WhereConjuction = 0;
+
+						}else if(tokens[i].compare("and")){
+							WhereConjuction = 1;
+						}else if(tokens[i].compare("or")){
+							WhereConjuction = 2;
+						}else if(tokens[i].compare("not")){
+							WhereConjuction = 3;
+						}else{
+							cmderror;
+							return;
+						}
+
+						i++;
+
+						itPos = std::find(colNames.begin(),colNames.end(),tokens[i]);
+						if(itPos == colNames.end()){
+							cout << "Invalid Column Names."<<endl;
+							return;
+						}
+						i++;
+						switch(tokens[i][0]){
+						case '=':
+							op = 0;
+							break;
+						case '>':
+
+							op = 1;
+							break;
+						case '<':
+							if(tokens[i+1][0]=='>'){
+								op = 3;
+								i++;
+							}else
+								op = 2;
+							break;
+							/*case '':
+							op = 0;
+							break;*/
+						default:
+							cmderror;
+							return;
+						}
+
+						i++;
+
+						switch(colTypes[itPos-colNames.begin()]){
+						case 1:
+							toklen = tokens[i].length()-1;
+							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''||!isAlpha(tokens[i].substr(1,toklen-1))){
+								cout << "Invalid Values."<<endl;
+								return;
+							}else{
+								tokens[i]=tokens[i].substr(1,toklen-1);
+							}
+							break;
+						case 2:
+							if(!isInt(tokens[i])){
+								cout << "Invalid Values."<<endl;
+								return;
+							}
+							break;
+						case 3:
+							if(!isReal(tokens[i])){
+								cout << "Invalid Values."<<endl;
+								return;
+							}
+							break;
+						default:
+							cmderror;
+							return;
+						}
+
+						strcpy(value,tokens[i].data());
+						//TODO:fix the logic value error in where
+						wc = new WhereCond(itPos-colNames.begin(),colTypes[itPos-colNames.begin()],op,value);
+						where->addCondition(WhereConjuction,wc);
+						i++;
+
+					}while(i!=tokens.size());
 				}else{
 					cmderror;
 					return;
