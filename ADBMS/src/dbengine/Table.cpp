@@ -263,6 +263,14 @@ int Table::insertTuples(vector<char*> aName,vector<char*> values){
 	return insertTuples(rs);
 }
 
+long Table::deleteTuples(Where* where, vector<int> attrType, int numOfAttr){
+	int* attrType_arr = new int[attrType.size()];
+	int i;
+	for(i=0;i<attrType.size();i++){
+		attrType_arr[i] = attrType[i];
+	}
+	return deleteTuples(where,attrType_arr,numOfAttr);
+}
 
 long Table::deleteTuples(Where* where, int* attrType, int numOfAttr){
 	DirPage* dp = tHeader;
@@ -293,6 +301,15 @@ long Table::updateTuples(Where *where,Modify* modify){
 	}
 	//TODO: Update systable
 	return noOfRecs;
+}
+
+int Table::getColumnPos(string colName){
+	//vector<string>::const_iterator itPos;
+	auto itPos = std::find( attrName.begin() ,attrName.end(),colName);
+	if(itPos == attrName.end()){
+		return -1;
+	}
+	return itPos-attrName.begin();
 }
 
 DirPage* Table::getDirPageHeader(){

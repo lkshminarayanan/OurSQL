@@ -25,6 +25,21 @@ Modify::Modify(int *attrType,int numOfAttr){
 	this->numOfAttr = numOfAttr;
 }
 
+Modify::Modify(vector<int> attrType,int numOfAttr){
+	numOfAttrToUpdate = 0;
+	startDirEntry = 0;
+	startSlotId = 1;
+	limit = MAX_RETR_LIMIT;
+
+	int *attrTypeArr = new int[attrType.size()];
+	for(int i=0;i<attrType.size();i++){
+		attrTypeArr[i] = attrType[i];
+	}
+
+	this->attrType = attrTypeArr;
+	this->numOfAttr = numOfAttr;
+}
+
 int Modify::addUpdatedValues(char* data,int pos){
 	values.push_back(std::make_pair(data,pos));
 	numOfAttrToUpdate++;

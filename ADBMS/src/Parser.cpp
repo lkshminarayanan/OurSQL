@@ -81,6 +81,8 @@ string Parser::findType(string s){
 
 int Parser::parse(string stmt){
 
+	//std::transform(stmt.begin(), stmt.end(), stmt.begin(), ::tolower);
+
 	if((stmt.at(stmt.size()-1)!=';')||stmt.size()<2){
 		cmderror;
 		return 1;
@@ -94,22 +96,44 @@ int Parser::parse(string stmt){
 	while(std::getline(ss, item))
 	{
 		std::size_t prev = 0, pos;
-		while ((pos = item.find_first_of(" ,()<=>", prev)) != std::string::npos)
+		bool readingVarchar = false;
+		while ((pos = item.find_first_of(" ,()<=>'", prev)) != std::string::npos)
 		{
-			if (pos > prev)
-				tokens.push_back(item.substr(prev, pos-prev));
+			if(readingVarchar){
+				tokens[tokens.size()-1].append(item.substr(prev, pos-prev));
+				tokens[tokens.size()-1].append(item.substr(pos,1));
+				if(item[pos]=='\''){
+					readingVarchar = false;
+				}
+
+			}else{
+				if (pos > prev)
+					tokens.push_back(item.substr(prev, pos-prev));
+
+				if(item[pos]=='\''){
+					readingVarchar = true;
+				}
+
+				if(item[pos]!=' ')
+					tokens.push_back(item.substr(pos, 1));
+			}
 			prev = pos+1;
-			if(item[pos]!=' ')
-				tokens.push_back(item.substr(pos, 1));
 		}
-		if (prev < item.length())
-			tokens.push_back(item.substr(prev, std::string::npos));
+		if (prev < item.length()){
+			if(readingVarchar){
+				tokens[tokens.size()-1].append(item.substr(prev, std::string::npos));
+			}else{
+				tokens.push_back(item.substr(prev, std::string::npos));
+			}
+
+		}
 	}
 
 	int n = tokens.size();
 	for(int i = 0;i<n;i++){
 		cout << tokens[i] << endl;
 	}
+
 
 	if(tokens[0].compare("exit")==0||(tokens[0].compare("goodbye")==0)){
 		cout << endl<< "Bye!";
@@ -176,6 +200,14 @@ int Parser::parse(string stmt){
 		actUpon(6,tokens);
 	}
 
+	else if((tokens[0].compare("delete"))==0&&(tokens[1].compare("from"))==0&&isAlpha(tokens[2])){
+		actUpon(7,tokens);
+	}
+
+	else if((tokens[0].compare("update"))==0&&isAlpha(tokens[1])&&(tokens[2].compare("set"))==0){
+		actUpon(8,tokens);
+	}
+
 	else if((tokens[0].compare("drop"))==0&&tokens.size()==3){
 		if(tokens[1].compare("database")==0)
 			actUpon(12,tokens);
@@ -192,6 +224,117 @@ int Parser::parse(string stmt){
 	return 1;
 }
 
+Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vector<int> colTypes, int i){
+	Where *where = new Where();
+	WhereCond *wc;
+	int op, toklen;
+	char *value;
+	int WhereConjuction;
+	vector<string>::iterator itPos;
+
+	do{
+
+		if(i+4>tokens.size()){//atleast 4 to parse
+			cmderror;
+			return NULL;
+		}
+
+
+		if(tokens[i].compare("where")==0){
+			WhereConjuction = 0;
+
+		}else if(tokens[i].compare("and")==0){
+			WhereConjuction = 1;
+		}else if(tokens[i].compare("or")==0){
+			WhereConjuction = 2;
+		}else if(tokens[i].compare("not")==0){
+			WhereConjuction = 3;
+		}else{
+			cmderror;
+			return NULL;
+		}
+
+
+		i++;
+
+		itPos = std::find(colNames.begin(),colNames.end(),tokens[i]);
+		if(itPos == colNames.end()){
+			cout << "Invalid Column Names."<<endl;
+			return NULL;
+		}
+		i++;
+		switch(tokens[i][0]){
+		case '=':
+			op = 0;
+			break;
+		case '>':
+			if(tokens[i+1][0]=='='){
+				op = 4;
+				i++;
+			}else
+				op = 1;
+			break;
+		case '<':
+			if(tokens[i+1][0]=='>'){
+				op = 3;
+				i++;
+			}else if(tokens[i+1][0]=='='){
+				op = 5;
+				i++;
+			}else
+				op = 2;
+			break;
+		case '!':
+			if(tokens[i+1][0]=='='){
+				op = 3;
+				i++;
+				break;
+			}
+			//no break. because else is an error.
+		default:
+			cmderror;
+			return NULL;
+		}
+
+		i++;
+
+		switch(colTypes[itPos-colNames.begin()]){
+		case 1:
+			toklen = tokens[i].length()-1;
+			if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
+				cout << "Invalid Values."<<endl;
+				return NULL;
+			}else{
+				tokens[i]=tokens[i].substr(1,toklen-1);
+			}
+			break;
+		case 2:
+			if(!isInt(tokens[i])){
+				cout << "Invalid Values."<<endl;
+				return NULL;
+			}
+			break;
+		case 3:
+			if(!isReal(tokens[i])){
+				cout << "Invalid Values."<<endl;
+				return NULL;
+			}
+			break;
+		default:
+			cmderror;
+			return NULL;
+		}
+		value = new char[100];
+		strcpy(value,tokens[i].data());
+		wc = new WhereCond(itPos-colNames.begin(),colTypes[itPos-colNames.begin()],op,value);
+		where->addCondition(WhereConjuction,wc);
+		i++;
+
+	}while(i!=tokens.size());
+
+	return where;
+}
+
 void Parser::actUpon(int ch,vector<string> tokens){
 	char dbName[100];
 	Select *select = new Select();
@@ -204,7 +347,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 	cout<<endl<<"5.Insert to table";
 	cout<<endl<<"6.Select *";
 	cout<<endl<<"7.Select colnames";
-	cout<<endl<<"";
+	cout<<endl<<"";where
 	cout<<endl<<"0.Exit";
 	cin>>ch;*/
 	switch(ch){
@@ -212,7 +355,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		if(dbs != NULL)
 			delete dbs;
 		break;
-	case 1:
+	case 1: // create database
 		strcpy(dbName,tokens[2].c_str());
 		if(dbs != NULL)
 			delete dbs;
@@ -224,7 +367,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					"'. Another db with same Name exists."<<endl;
 		}
 		break;
-	case 2:
+	case 2: // load database
 		//cout << endl << "Enter Database Name";
 		strcpy(dbName,tokens[1].c_str());
 		if(dbs != NULL)
@@ -236,7 +379,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			cout <<  "Error!"<< dbName<<" does not exist."<<endl;
 		}
 		break;
-	case 3:
+	case 3: // show tables
 		if(dbs == NULL){
 			cout << "No Database Loaded"<<endl;
 		}else{
@@ -422,7 +565,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 						switch(attrType[(hasColumnNames)?pos[k]:k]){
 						case 1:
 							toklen = tokens[i].length()-1;
-							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''||!isAlpha(tokens[i].substr(1,toklen-1))){
+							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
 								cout << "Invalid Values."<<endl;
 								return;
 							}else{
@@ -495,14 +638,14 @@ void Parser::actUpon(int ch,vector<string> tokens){
 						break;
 
 				}while(1);
-				rs->printAll(0,rs->getNumOfRecords());
-				tbl->insertTuples(rs);
+				//rs->printAll(0,rs->getNumOfRecords());
+				cout << tbl->insertTuples(rs) << " records inserted."<<endl;
 				delete tbl;
 			}
 		}
 
 		break;
-	case 6:
+	case 6: // select
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
 
@@ -537,107 +680,21 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			colNames = tbl->getAttributeNamesString();
 			colTypes = tbl->getAttributeTypes();
 
-			WhereCond *wc;
-			int op, toklen;
-			char *value = new char[100];
-			int WhereConjuction;
-
 			i++;
 			if(i!=tokens.size()){//not the end
 				if(tokens[i].compare("where")==0){
 					//Where present;
-					//TODO:Analyze and store where
-					if(i+1==tokens.size()){
-						cmderror;
+					where = prepareWhere(tokens,colNames,colTypes,i);
+					if(where == NULL){
 						return;
 					}
-					do{
-						if(tokens[i].compare("where")){
-							WhereConjuction = 0;
-
-						}else if(tokens[i].compare("and")){
-							WhereConjuction = 1;
-						}else if(tokens[i].compare("or")){
-							WhereConjuction = 2;
-						}else if(tokens[i].compare("not")){
-							WhereConjuction = 3;
-						}else{
-							cmderror;
-							return;
-						}
-
-						i++;
-
-						itPos = std::find(colNames.begin(),colNames.end(),tokens[i]);
-						if(itPos == colNames.end()){
-							cout << "Invalid Column Names."<<endl;
-							return;
-						}
-						i++;
-						switch(tokens[i][0]){
-						case '=':
-							op = 0;
-							break;
-						case '>':
-
-							op = 1;
-							break;
-						case '<':
-							if(tokens[i+1][0]=='>'){
-								op = 3;
-								i++;
-							}else
-								op = 2;
-							break;
-							/*case '':
-							op = 0;
-							break;*/
-						default:
-							cmderror;
-							return;
-						}
-
-						i++;
-
-						switch(colTypes[itPos-colNames.begin()]){
-						case 1:
-							toklen = tokens[i].length()-1;
-							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''||!isAlpha(tokens[i].substr(1,toklen-1))){
-								cout << "Invalid Values."<<endl;
-								return;
-							}else{
-								tokens[i]=tokens[i].substr(1,toklen-1);
-							}
-							break;
-						case 2:
-							if(!isInt(tokens[i])){
-								cout << "Invalid Values."<<endl;
-								return;
-							}
-							break;
-						case 3:
-							if(!isReal(tokens[i])){
-								cout << "Invalid Values."<<endl;
-								return;
-							}
-							break;
-						default:
-							cmderror;
-							return;
-						}
-
-						strcpy(value,tokens[i].data());
-						//TODO:fix the logic value error in where
-						wc = new WhereCond(itPos-colNames.begin(),colTypes[itPos-colNames.begin()],op,value);
-						where->addCondition(WhereConjuction,wc);
-						i++;
-
-					}while(i!=tokens.size());
 				}else{
 					cmderror;
 					return;
 				}
 			}
+
+			//where->toString();
 
 			//now for select;
 			if(tokens[1][0]=='*'){
@@ -650,13 +707,16 @@ void Parser::actUpon(int ch,vector<string> tokens){
 
 			else if(tokens[1].compare("from")!=0){
 				i = 0;
+				int colPos = -1;
+
 				do{
-					itPos = std::find(colNames.begin(),colNames.end(),tokens[++i]);
-					if(itPos == colNames.end()){
+					colPos = tbl->getColumnPos(tokens[++i]);
+					//itPos = std::find(colNames.begin(),colNames.end(),tokens[++i]);
+					if(colPos == -1){
 						cout << "Invalid Column Names"<<endl;
 						return;
 					}else{
-						pos.push_back(itPos-colNames.begin());
+						pos.push_back(colPos);
 					}
 
 				}while(tokens[++i][0]==',');
@@ -681,51 +741,133 @@ void Parser::actUpon(int ch,vector<string> tokens){
 
 		}
 		break;
-	case 7:
+	case 7: /*delete from x where */
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
 		}else{
 			char *tableName = new char[100];
-			strcpy(tableName,tokens[3].c_str());
+			strcpy(tableName,tokens[2].c_str());
 			Table *tbl = new Table(tableName,dbs);
 			if(tbl->getDirPageHeader()==NULL){
 				cout <<"Table does'nt exist."<<endl;
 			}else{
-				RecordSet *rs = tbl->selectTuples();
-				rs->printAll(0,rs->getNumOfRecords());
+
+				Where *where = new Where();
+
+				vector<string> colNames;
+				vector<int> colTypes;
+
+				colNames = tbl->getAttributeNamesString();
+				colTypes = tbl->getAttributeTypes();
+
+				if(tokens.size()>3){//not the end
+					if(tokens[3].compare("where")==0){
+						//Where present;
+						where = prepareWhere(tokens,colNames,colTypes,3);
+						//where->toString();
+						if(where == NULL){
+							return;
+						}
+					}else{
+						cmderror;
+						return;
+					}
+				}
+
+				cout << tbl->deleteTuples(where,colTypes,colTypes.size()) <<" rows deleted."<<endl;
+
 			}
 		}
 		break;
-	case 8:
+	case 8://modify
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
 		}else{
 			char tableName[100];
-			cout <<endl<<"TableName? :";
-			cin >> tableName;
+			strcpy(tableName,tokens[1].c_str());
 			Table *tbl = new Table(tableName,dbs);
 			if(tbl->getDirPageHeader()==NULL){
-				cout << endl<<"Table doesnot exist.";
+				cout <<"Table does'nt exist."<<endl;
 			}else{
-				int numOfCol;
-				vector<char*> attrName = tbl->getAttributeNames();
-				vector<char*> selAttrName;
-				char *colName;
-				int tableTotalCol = tbl->getNumOfAttr();
-				cout << endl << "No. of columns to select :";
-				cin>>numOfCol;
-				cout <<endl<<"Choose the column [";
-				for(int i=0;i<tableTotalCol;i++){
-					cout <<" '"<<attrName[i]<<"' ";
-				}
-				cout << "]";
-				for(int i=0;i<numOfCol;i++){
-					colName = new char[100];
-					cin >> colName;
-					selAttrName.push_back(colName);
-				}
-				RecordSet *rs = tbl->selectTuples(1,selAttrName);
-				rs->printAll(0,100);
+
+
+
+				vector<string> colNames;
+				vector<int> colTypes;
+				int i = 3;//update tblname set
+				int pos = -1;
+
+				colNames = tbl->getAttributeNamesString();
+				colTypes = tbl->getAttributeTypes();
+
+				int toklen;
+				char *value;
+
+				Where *where = new Where();
+				Modify *modify = new Modify(colTypes,colTypes.size());
+
+				do{
+					pos = tbl->getColumnPos(tokens[i]);
+
+					if(pos==-1){
+						cout << "Invalid Column Names."<<endl;
+					}else{
+						i++;
+						if(tokens[i][0]!='='){
+							cmderror;
+							return;
+						}
+
+						i++;
+						switch(colTypes[pos]){
+						case 1:
+							toklen = tokens[i].length()-1;
+							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
+								cout << "Invalid Values."<<endl;
+								return;
+							}else{
+								tokens[i]=tokens[i].substr(1,toklen-1);
+							}
+							break;
+						case 2:
+							if(!isInt(tokens[i])){
+								cout << "Invalid Values."<<endl;
+								return;
+							}
+							break;
+						case 3:
+							if(!isReal(tokens[i])){
+								cout << "Invalid Values."<<endl;
+								return;
+							}
+							break;
+						default:
+							cmderror;
+							return;
+						}
+						value = new char[100];
+						strcpy(value,tokens[i].data());
+						modify->addUpdatedValues(value,pos);
+					}
+					if(tokens[++i][0]==','){
+						i++;
+					}
+
+					else if(tokens[i].compare("where")==0){
+
+						break;
+					}
+
+					else{
+						cmderror;
+						return;
+					}
+
+				}while(1);
+				where = prepareWhere(tokens,colNames,colTypes,i);
+
+
+				cout << tbl->updateTuples(where,modify) << " records updated."<<endl;
 			}
 		}
 		break;
@@ -823,10 +965,60 @@ using namespace dbEngine;
 
 int main(){
 	string stmt;
+	string substmt;
 	Parser p;
 	do{
 		cout << "OurSQL$: ";
 		getline(cin, stmt);
+
+		//shortcuts for testing.
+		if(stmt[0]=='.'){
+			if(stmt[1]=='.'){
+				stmt = "use iiitb;";
+			}
+			else if(stmt[1]=='a'){
+				stmt = "show tables;";
+			}
+
+			else if(stmt[1]=='s'){
+				string tbl = stmt.substr(2);
+				stmt = "select * from ";
+				stmt.append(tbl);
+				stmt.append(";");
+			}
+
+			else if(stmt[1]=='x'){
+				stmt = "exit;";
+			}
+
+			else if(stmt[1]=='t'){
+				stmt = "update sam set age=24, mark=98 where age=23;";
+			}
+		}//end shortcuts
+
+		while(stmt[stmt.size()-1]!=';'){
+			cout << "     >";
+			getline(cin,substmt);
+			if(substmt.size()>0){
+				if(stmt.size()>0) stmt.append(" ");
+				stmt.append(substmt);
+			}
+		}
+
 	}while(p.parse(stmt)!=0);
 	return 0;
 }
+
+
+/**
+ * create_tree create
+ * insert.h insert
+ * find_key.h findKey - lists all duplicates.
+ * modify.h - modify
+ * range_search.h -
+ * delete key - full key delete
+ * delete key rid - rid delete
+ *
+ *
+ *
+ * */

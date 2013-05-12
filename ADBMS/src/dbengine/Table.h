@@ -65,11 +65,15 @@ public:
 	int insertTuples(char* tName,RecordSet* rs);//insert directly with table name.
 
 	long deleteTuples(Where *where,int* attrType, int numOfAttr);
+	long deleteTuples(Where *where,vector<int> attrType, int numOfAttr);
+
 	long updateTuples(Where *where, Modify* modify); //TODO
 
 	int createIndex(int attrID); //TODO
 
 	long getNumOfRows();
+
+	int getColumnPos(string colName);
 
 };
 

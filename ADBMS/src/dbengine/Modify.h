@@ -29,6 +29,7 @@ private:
 public:
 	Modify();
 	Modify(int* attrType, int numOfAttr);
+	Modify(vector<int> attrType, int numOfAttr);
 	int addUpdatedValues(char* data, int pos);
 
 	Record* updateRecord(Record* record);

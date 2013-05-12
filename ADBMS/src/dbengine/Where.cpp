@@ -22,6 +22,13 @@ WhereCond::~WhereCond() {
 	// TODO Auto-generated destructor stub
 }
 
+void WhereCond::toString(){
+	cout << "AttrID: "<<attrID;
+	cout << "\nop: "<<op;
+	cout << "\nattrType: "<<attrType;
+	cout << "\nvalue: " <<value << endl;
+}
+
 bool WhereCond::testRecord(Record *r){
 	char* data = r->getValues()[attrID];
 	double res , data_v, value_v;
@@ -60,6 +67,14 @@ bool WhereCond::testRecord(Record *r){
 		if(res != 0){
 			return true;
 		}
+		break;
+	case 4://>=
+		if(res > 0 ||res ==0)
+			return true;
+		break;
+	case 5://<=
+		if(res < 0 ||res ==0)
+			return true;
 		break;
 	default:
 		break;
@@ -112,6 +127,15 @@ int Where::addCondition(int opType,WhereCond *whereCond){
 
 int Where::isWhereReq(){
 	return where.size();
+}
+
+void Where::toString(){
+	for(int i=0;i<where.size();i++){
+		cout << "\nCond-"<<i;
+		cout << "\nAND/OR/NOT: "<<operatorType[i];
+		cout << "\n";
+		where[i]->toString();
+	}
 }
 
 } /* namespace datamodels */

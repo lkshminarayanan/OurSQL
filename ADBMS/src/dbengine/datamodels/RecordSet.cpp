@@ -80,7 +80,7 @@ vector<Record*> RecordSet::getRecords(int start,int limit){
 void RecordSet::printAll(int start, int limit){
 
 	if(numOfRecords==0){
-		cout << endl << "No Records Found.";
+		cout << endl << "No Records Found."<<endl;
 		return;
 	}
 	cout << endl<< "Total Records : " << numOfRecords;

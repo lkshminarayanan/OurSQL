@@ -31,7 +31,9 @@ public:
 	 * 0 =
 	 * 1 >
 	 * 2 <
-	 * 3 <>
+	 * 3 <> !=
+	 * 4 >=
+	 * 5 <=
 	 *
 	 */
 	char* value;
@@ -41,6 +43,7 @@ public:
 	virtual ~WhereCond();
 
 	bool testRecord(Record *r);//test the record here and send the result
+	void toString();
 
 };
 
@@ -63,6 +66,7 @@ public:
 	bool testRecord(Record *r);
 	int addCondition(int operatorType,WhereCond* whereCond);
 	int isWhereReq();
+	void toString();
 };
 
 } /* namespace datamodels */
