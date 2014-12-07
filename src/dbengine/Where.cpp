@@ -130,7 +130,7 @@ int Where::isWhereReq(){
 }
 
 void Where::toString(){
-	for(int i=0;i<where.size();i++){
+	for(unsigned int i=0;i<where.size();i++){
 		cout << "\nCond-"<<i;
 		cout << "\nAND/OR/NOT: "<<operatorType[i];
 		cout << "\n";
@@ -140,76 +140,3 @@ void Where::toString(){
 
 } /* namespace datamodels */
 
-using namespace datamodels;
-using namespace dbEngine;
-
-int main_w(){
-
-	/*
-	 * 0 =
-	 * 1 >
-	 * 2 <
-	 * 3 <>
-	 *
-	 */
-
-	Record *r1 = new Record();
-	r1->addValue("99995",2);
-	r1->addValue("88",2);
-	r1->addValue("443.3199999999",3);
-	r1->addValue("lakshmin",1);
-
-	Record *r2 = new Record();
-	r2->addValue("99995",2);
-	r2->addValue("89",2);
-	r2->addValue("443.3199999999",3);
-	r2->addValue("lakshmina",1);
-
-	Record *r3 = new Record();
-	r3->addValue("99995",2);
-	r3->addValue("90",2);
-	r3->addValue("443.3199999999",3);
-	r3->addValue("lakshmis",1);
-
-	WhereCond *wc = new WhereCond(1,2,1,"90");
-	WhereCond *wc1 = new WhereCond(3,1,0,"lakshmin");
-
-	Where *w = new Where();
-
-	w->addCondition(0,wc);
-	w->addCondition(2,wc1);
-
-	cout <<endl<< "Result "<< w->testRecord(r1);
-	cout <<endl<< "Result "<< w->testRecord(r2);
-	cout <<endl<< "Result "<< w->testRecord(r3);
-
-	int a[4] = {2,2,3,1};
-
-	RecordSet *rs = new RecordSet(a,4);
-
-	rs->addRecord(r1);
-	rs->addRecord(r2);
-	rs->addRecord(r3);
-
-	rs->printAll(0,3);
-
-	int b[4] = {2,2,3,1};
-
-
-
-	int pos[2] = {1,3};
-
-	Select *s = new Select(pos,2,b,4);
-
-	RecordSet *prs = new RecordSet(s->getAttrType(),2);
-
-	cout << "recstr"<<((r1->toRecordString(b))+16);
-
-	prs->addRecord(s->project(r1));
-	prs->addRecord(s->project(r2));
-	prs->addRecord(s->project(r3));
-
-	prs->printAll(0,3);
-
-	return 1;
-}

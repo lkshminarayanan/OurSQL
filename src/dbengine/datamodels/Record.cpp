@@ -86,7 +86,7 @@ char* Record::toRecordString(int* attrType){
 	return recStr;
 }
 
-int Record::modifyRecord(int pos, char* data){
+int Record::modifyRecord(unsigned int pos, char* data){
 	if(pos > values.size()){
 		error("@Record : Invalid Size in Modify Record");
 		return 0;

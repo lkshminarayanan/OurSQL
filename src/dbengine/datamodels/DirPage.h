@@ -51,7 +51,7 @@ class DirPage:public Page {
 private:
 	long nextPage;
 	long prevPage;
-	long DEcount;//number of Directory entries
+	unsigned long DEcount;//number of Directory entries
 	long maxSpaceAvailable;//max Space available in any of the DE
 	vector<DirEntry*> dirEntries;
 	//pointer to write area

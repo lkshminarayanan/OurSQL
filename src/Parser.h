@@ -32,7 +32,7 @@ public:
 	bool isReal(string s);
 	string findType(string s);
 	int str2int (string s);
-	Where *prepareWhere(vector<string> tokens, vector<string> colNames, vector<int> colTypes, int i);
+	Where *prepareWhere(vector<string> tokens, vector<string> colNames, vector<int> colTypes, unsigned i);
 };
 
 } /* namespace datamodels */

@@ -116,7 +116,6 @@ void RecordSet::printAll(int start, int limit){
 	}
 	cout << endl;
 	int j;
-	int end = start + limit;
 	for(i = 0;i<numOfRecords;i++){
 		for(j=0;j<numOfAttr;j++){
 			//cout << "here here";cout.flush();
@@ -129,7 +128,7 @@ void RecordSet::printAll(int start, int limit){
 
 }
 
-int RecordSet::getSizeOf(int recNo){
+int RecordSet::getSizeOf(unsigned recNo){
 	if(recNo < 0||recNo > records.size())
 		return 0;
 	return records[recNo]->getSize();

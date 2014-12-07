@@ -154,8 +154,6 @@ int DataBaseServer::addToSysIndex(long tID, int colID, long startPage){
 
 void DataBaseServer::showTables(){
 	RecordSet *rs;
-	int pos[] = {1};
-	int tAttr[] = {2,1,2,2,2,2};
 	//Select *select = new Select(pos,1,tAttr,6);
 	rs = SysTable->selectTuples(new Select(),new Where());
 	//rs = SysColumn->selectTuples();

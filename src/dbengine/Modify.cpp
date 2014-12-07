@@ -32,7 +32,7 @@ Modify::Modify(vector<int> attrType,int numOfAttr){
 	limit = MAX_RETR_LIMIT;
 
 	int *attrTypeArr = new int[attrType.size()];
-	for(int i=0;i<attrType.size();i++){
+	for(unsigned int i=0;i<attrType.size();i++){
 		attrTypeArr[i] = attrType[i];
 	}
 

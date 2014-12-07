@@ -135,8 +135,8 @@ int Parser::parse(string stmt){
 	}
 
 
-	if(tokens[0].compare("exit")==0||(tokens[0].compare("goodbye")==0)){
-		cout << endl<< "Bye!";
+	if(tokens[0].compare("exit")==0||(tokens[0].compare("quit")==0)){
+		cout << endl<< "Bye!\n";
 		actUpon(0,tokens);
 		return 0;
 	}
@@ -224,7 +224,7 @@ int Parser::parse(string stmt){
 	return 1;
 }
 
-Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vector<int> colTypes, int i){
+Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vector<int> colTypes, unsigned i){
 	Where *where = new Where();
 	WhereCond *wc;
 	int op, toklen;
@@ -469,7 +469,8 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
 		}else{
-			int noOfattr,i;
+			int noOfattr;
+			unsigned i;
 			vector<int> attrType;
 			vector<string> attrName;
 			vector<string> ipAttrNames;
@@ -533,7 +534,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				for(int j=0;j<ipNum;j++)
 					cout << ipAttrNames[j] <<endl;
 
-				for(int j=0;j<pos.size();j++)
+				for(unsigned j=0;j<pos.size();j++)
 					cout << pos[j] <<endl;
 
 				if(hasColumnNames&&(pos.size()!=ipAttrNames.size())){
@@ -611,8 +612,12 @@ void Parser::actUpon(int ch,vector<string> tokens){
 									break;
 								}
 							}
-							if(k==ipNum)//never went inside
-								r->addValue("",attrType[j]);
+							if(k==ipNum){
+								//never went inside
+								char* blank = new char[1];
+								strcpy(blank, "");
+								r->addValue(blank,attrType[j]);
+							}
 						}
 					}else{
 						for(int j=0;j<noOfattr;j++){
@@ -653,7 +658,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			//cout << "Where "<< (std::find(tokens.begin(),tokens.end(),"where"))-tokens.begin();
 			vector<string>::iterator itPos;
 			char *tableName = new char[100];
-			int i;
+			unsigned i;
 			vector<string> colNames;
 			vector<int> colTypes;
 			vector<int> pos;
@@ -960,65 +965,3 @@ void Parser::actUpon(int ch,vector<string> tokens){
 
 
 } /* namespace datamodels */
-
-using namespace dbEngine;
-
-int main(){
-	string stmt;
-	string substmt;
-	Parser p;
-	do{
-		cout << "OurSQL$: ";
-		getline(cin, stmt);
-
-		//shortcuts for testing.
-		if(stmt[0]=='.'){
-			if(stmt[1]=='.'){
-				stmt = "use iiitb;";
-			}
-			else if(stmt[1]=='a'){
-				stmt = "show tables;";
-			}
-
-			else if(stmt[1]=='s'){
-				string tbl = stmt.substr(2);
-				stmt = "select * from ";
-				stmt.append(tbl);
-				stmt.append(";");
-			}
-
-			else if(stmt[1]=='x'){
-				stmt = "exit;";
-			}
-
-			else if(stmt[1]=='t'){
-				stmt = "update sam set age=24, mark=98 where age=23;";
-			}
-		}//end shortcuts
-
-		while(stmt[stmt.size()-1]!=';'){
-			cout << "     >";
-			getline(cin,substmt);
-			if(substmt.size()>0){
-				if(stmt.size()>0) stmt.append(" ");
-				stmt.append(substmt);
-			}
-		}
-
-	}while(p.parse(stmt)!=0);
-	return 0;
-}
-
-
-/**
- * create_tree create
- * insert.h insert
- * find_key.h findKey - lists all duplicates.
- * modify.h - modify
- * range_search.h -
- * delete key - full key delete
- * delete key rid - rid delete
- *
- *
- *
- * */

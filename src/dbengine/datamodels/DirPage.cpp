@@ -18,7 +18,7 @@ DirPage::DirPage() {
 	//The Storage Area
 	writeToPage();
 	dirEntries = DirEntry::getAllEntries(p,DEcount);
-	for(int i = 0;i<DEcount;i++){
+	for(unsigned long i = 0;i<DEcount;i++){
 		lg2("");
 		lg2("DEs: "<< i<<" " << dirEntries[i]->getPageID() << " "<<dirEntries[i]->getTFS());
 
@@ -37,7 +37,7 @@ DirPage::DirPage(long pid):Page(pid){
 	maxSpaceAvailable = dp->maxSpaceAvailable;
 	dirEntries = DirEntry::getAllEntries(p,DEcount);
 
-	for(int i = 0;i<DEcount;i++){
+	for(unsigned long i = 0;i<DEcount;i++){
 		lg2("DEs: "<< i<<" " << dirEntries[i]->getPageID() << " "<<dirEntries[i]->getTFS());
 	}
 
@@ -172,7 +172,7 @@ int DirPage::insertRecords(RecordSet* rs, int s){
 }
 
 int DirPage::findNextPartialPage(int start,int recLen){
-	for(int i = start;i<DEcount;i++)
+	for(unsigned long i = start;i<DEcount;i++)
 		if(dirEntries[i]->getTFS()>=recLen)
 			return i;
 	return -1;
@@ -180,8 +180,7 @@ int DirPage::findNextPartialPage(int start,int recLen){
 
 void DirPage::updateMaximumSpaceParam(){
 	maxSpaceAvailable = 0;
-	int i;
-	for(i=0;i<DEcount;i++)
+	for(unsigned long i=0;i<DEcount;i++)
 		if(maxSpaceAvailable < dirEntries[i]->getTFS())
 			maxSpaceAvailable = dirEntries[i]->getTFS();
 }

@@ -29,7 +29,7 @@ public:
 	char* toRecordString(int* attrType);
 	vector<char*> getValues();
 
-	int modifyRecord(int pos, char* data);
+	int modifyRecord(unsigned pos, char* data);
 
 	int getSize();
 

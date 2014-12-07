@@ -1,5 +1,11 @@
-/Debug
 *~
 .project
 .settings
 .cproject
+*CMakeCache.txt
+/bin/
+/build/
+/Debug/
+*Makefile
+*CMakeFiles*
+*cmake_install.cmake

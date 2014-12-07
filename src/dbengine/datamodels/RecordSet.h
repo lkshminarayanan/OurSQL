@@ -39,7 +39,7 @@ public:
 	int addRecord(char* recStr,int recSize);//while retrieving
 	int addRecord(Record* record);//while inserting
 
-	int getSizeOf(int recNo);
+	int getSizeOf(unsigned recNo);
 
 	void setAttrName(vector<char*> aName);
 	void printAll(int start, int limit);

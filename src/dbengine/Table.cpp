@@ -236,7 +236,7 @@ int Table::insertTuples(RecordSet *rs){
 
 int Table::insertTuples(vector<char*> aName,vector<char*> values){
 	//check the order of the entry.
-	int i,j;
+	int i;
 	/*char **valuesArr =new char*[numOfAttrColumns];
 	for(i = 0; i < numOfAttrColumns; ++i)
 		valuesArr[i] = new char[100];*/
@@ -244,7 +244,7 @@ int Table::insertTuples(vector<char*> aName,vector<char*> values){
 	Record *r = new Record();
 	for(i=0;i<numOfAttrColumns;i++){
 		pos = -1;
-		for(j=0;j<aName.size();j++){
+		for(unsigned j=0;j<aName.size();j++){
 			if(strcmp(attrName[i],aName[j])==0){
 				pos = j;
 				break;
@@ -252,8 +252,11 @@ int Table::insertTuples(vector<char*> aName,vector<char*> values){
 		}
 		if(pos!=-1){
 			r->addValue(values[pos],attrType[i]);
-		}else
-			r->addValue("",attrType[i]);
+		}else{
+			char *blank = new char[1];
+			strcpy(blank, "");
+			r->addValue(blank,attrType[i]);
+		}
 	}
 
 	RecordSet *rs;
@@ -265,8 +268,7 @@ int Table::insertTuples(vector<char*> aName,vector<char*> values){
 
 long Table::deleteTuples(Where* where, vector<int> attrType, int numOfAttr){
 	int* attrType_arr = new int[attrType.size()];
-	int i;
-	for(i=0;i<attrType.size();i++){
+	for(unsigned i=0;i<attrType.size();i++){
 		attrType_arr[i] = attrType[i];
 	}
 	return deleteTuples(where,attrType_arr,numOfAttr);
@@ -285,7 +287,7 @@ long Table::deleteTuples(Where* where, int* attrType, int numOfAttr){
 
 long Table::updateTuples(Where *where,Modify* modify){
 	DirPage* dp = tHeader;
-	DirPage* old;
+	//DirPage* old;
 	long noOfRecs = 0;
 	RecordSet *rs;
 	while(dp != NULL){
@@ -295,7 +297,7 @@ long Table::updateTuples(Where *where,Modify* modify){
 			insertTuples(rs);
 			modify->resetLimits();
 		}while(modify->isThereMore());
-		old = dp;
+		//old = dp;
 		dp = dp->getNextPage();
 		//		delete old;
 	}
