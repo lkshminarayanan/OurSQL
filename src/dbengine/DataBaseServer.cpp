@@ -12,10 +12,15 @@ using namespace datamodels;
 
 namespace dbEngine {
 
+char DataBaseServer::dataDirectory[FILENAME_MAX];
+
 DataBaseServer::DataBaseServer() {}
 
 DataBaseServer::DataBaseServer(char* databaseName,bool createNew){
-	dbh = new DataBaseHeader(databaseName,createNew);
+	char completeDatabaseFilePath[FILENAME_MAX];
+	strcpy(completeDatabaseFilePath, dataDirectory);
+	strcat(completeDatabaseFilePath, databaseName);
+	dbh = new DataBaseHeader(completeDatabaseFilePath,createNew);
 	if(dbh->getNoOfPages()==-1){
 		valid = false;
 		return;
@@ -169,6 +174,14 @@ void DataBaseServer::showTables(){
 		cout << endl;
 	}else
 		cout<<"No tables found."<<endl;
+}
+
+void DataBaseServer::getDataDirectory(char* dataDirLoc){
+	strcpy(dataDirLoc, dataDirectory);
+}
+
+void DataBaseServer::setDataDirectory(char* dataDirLoc){
+	strcpy(dataDirectory, dataDirLoc);
 }
 
 } /* namespace datamodels */

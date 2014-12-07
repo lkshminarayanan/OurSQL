@@ -6,9 +6,8 @@ namespace datamodels {
 char* DBName;
 
 Cache::Cache(char* fileName, bool newFile) {
-	// TODO Auto-generated constructor stub
-	string fn = fileName;
-	string DBpath = dirpath+fn+".db";
+	string fileNameStr = fileName;
+	string DBpath = fileNameStr+".db";
 
 	if(!newFile){
 		if(isDBExists(DBpath)){
@@ -34,12 +33,6 @@ Cache::Cache(char* fileName, bool newFile) {
 		}
 	}
 }
-
-//Cache::Cache(char* filename){
-//	DBName = filename;
-//	Cache();
-//}
-//
 
 Cache* Cache::cacheInstance = NULL;
 

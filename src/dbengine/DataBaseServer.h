@@ -18,6 +18,7 @@ class Table;
 
 class DataBaseServer {
 private:
+	static char dataDirectory[FILENAME_MAX];
 
 public:
 	bool valid;
@@ -47,6 +48,9 @@ public:
 	int addToSysTable(char* tName, int noOfAttr, long startDirPage);
 	int addToSysColumn(long tID, char* colName, int colID, int maxSize, int type, int isIndexed);
 	int addToSysIndex(long tID, int colID, long startPage);
+
+	static void getDataDirectory(char *dataDirLoc);
+	static void setDataDirectory(char *dataDirLoc);
 };
 
 } /* namespace datamodels */

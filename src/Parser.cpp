@@ -129,12 +129,6 @@ int Parser::parse(string stmt){
 		}
 	}
 
-	int n = tokens.size();
-	for(int i = 0;i<n;i++){
-		cout << tokens[i] << endl;
-	}
-
-
 	if(tokens[0].compare("exit")==0||(tokens[0].compare("quit")==0)){
 		cout << endl<< "Bye!\n";
 		actUpon(0,tokens);
@@ -340,16 +334,6 @@ void Parser::actUpon(int ch,vector<string> tokens){
 	Select *select = new Select();
 	Where *where = new Where();
 
-	/*cout<<endl<<"1.Create Database";
-	cout<<endl<<"2.Load Database";
-	cout<<endl<<"3.Show Tables";
-	cout<<endl<<"4.Create Table";
-	cout<<endl<<"5.Insert to table";
-	cout<<endl<<"6.Select *";
-	cout<<endl<<"7.Select colnames";
-	cout<<endl<<"";where
-	cout<<endl<<"0.Exit";
-	cin>>ch;*/
 	switch(ch){
 	case 0:
 		if(dbs != NULL)
@@ -919,6 +903,8 @@ void Parser::actUpon(int ch,vector<string> tokens){
 	case 11:
 		DIR *dir;
 		struct dirent *ent;
+		char dirpath[FILENAME_MAX];
+		DataBaseServer::getDataDirectory(dirpath);
 		if ((dir = opendir (dirpath)) != NULL) {
 			/* print all the files and directories within directory */
 			string db;
@@ -939,6 +925,8 @@ void Parser::actUpon(int ch,vector<string> tokens){
 	case 12:
 		if(isAlpha(tokens[2])){
 			char *filepath = new char[300];
+			char dirpath[FILENAME_MAX];
+			DataBaseServer::getDataDirectory(dirpath);
 			strcpy(filepath,dirpath);
 			strcat(filepath,tokens[2].c_str());
 			strcat(filepath,".db");

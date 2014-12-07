@@ -31,7 +31,6 @@ class Cache {
 private:
 	fstream db;
 	long pageNum;
-//	string DBName;
 	static Cache* cacheInstance;
 	Cache(char* fileName, bool newFile);
 	Cache();
