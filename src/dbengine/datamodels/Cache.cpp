@@ -1,6 +1,8 @@
 
 #include "Cache.h"
 
+int pageSize = 1024*4;
+
 namespace datamodels {
 
 char* DBName;
@@ -13,6 +15,7 @@ Cache::Cache(char* fileName, bool newFile) {
 		if(isDBExists(DBpath)){
 			db.open(DBpath.c_str(),ios::binary | ios::out | ios::in );
 			lg("DB Loaded.");
+			pageNum = 0;
 		}else{
 			lg("Invalid Database Name");
 			pageNum = -1;
@@ -26,9 +29,6 @@ Cache::Cache(char* fileName, bool newFile) {
 			creat(DBpath.c_str(), S_IRWXU);
 			db.open(DBpath.c_str(),ios::binary | ios::out | ios::in );
 			pageNum = 1;
-			//		char *buf = new char[pageSize];
-			//		memcpy(buf,&pageNum,sizeof(pageNum));
-			//		db.write(buf,pageSize);
 			lg( "DB created");
 		}
 	}
@@ -56,22 +56,29 @@ Cache* Cache::getInstance(){
 Cache::~Cache() {
 	// TODO Auto-generated destructor stub
 	lg("Closing file");
+
 	db.close();
 }
 
 int Cache::getNewPage(){
-	char *buf = (char*)malloc(pageSize);
-	memcpy(buf,&pageNum,sizeof(pageNum));
-	db.seekp(pageSize*(pageNum),ios_base::beg);
+	char *buf = new char[pageSize];
+	long pNum;//page number
+	memset( buf, '\0', sizeof(char)*pageSize );
+	if(freePages.size()==0){
+		pNum = pageNum;
+		pageNum++;
+	}else{
+		pNum = freePages.front();
+		freePages.erase (freePages.begin());
+	}
+	db.seekp(pageSize*(pNum),ios_base::beg);
 	db.write(buf,pageSize);
 	db.flush();
-	pageNum++;
-	//updating first page//maybe data-header
-	db.seekp(0,ios_base::beg);
-	char *buf1 = new char[pageSize];
-	memcpy(buf1,&pageNum,sizeof(pageNum));
-	db.write(buf1,pageSize);
-	return pageNum - 1;
+	delete[] buf;
+
+	//cout << "Cache : Giving Out "<<pNum<<endl;
+
+	return pNum;
 }
 
 int Cache::writePage(long pageid, char* page){
@@ -83,6 +90,15 @@ int Cache::writePage(long pageid, char* page){
 
 char* Cache::readPage(long pageid){
 	char *buf = new char[pageSize];
+	memset(buf,'\0',pageSize);
+	db.seekg(pageSize*pageid,ios_base::beg);
+	db.read(buf,pageSize);
+	return buf;
+}
+
+char* Cache::readPageFromIndex(long pageid){
+	char *buf = (char*)malloc(pageSize*sizeof(char));
+	memset(buf,'\0',pageSize);
 	db.seekg(pageSize*pageid,ios_base::beg);
 	db.read(buf,pageSize);
 	return buf;
@@ -99,6 +115,30 @@ bool Cache::isDBExists(string dbpath){
 
 long Cache::getPageNum(){
 	return pageNum;
+}
+
+void Cache::deletePage(long pageId){
+	lg("Deleting Page "<<pageId);
+	freePages.push_back(pageId);
+}
+long* Cache::getFreePages(){
+	long sz = freePages.size();
+	long *fp = new long[sz];
+	for(int i=0;i<sz;i++){
+		fp[i] = freePages[i];
+	}
+	return fp;
+
+}
+void Cache::setFreePages(long *fp,long sz){
+	freePages.clear();
+	for(int i=0;i<sz;i++){
+		freePages.push_back(fp[i]);
+	}
+}
+
+long Cache::getCountFreePages(){
+	return freePages.size();
 }
 
 } /* namespace datamodels */

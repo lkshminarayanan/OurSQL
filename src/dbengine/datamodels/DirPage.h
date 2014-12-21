@@ -33,7 +33,7 @@ private:
 public:
 	DirEntry();
 	DirEntry(long,long);
-	~DirEntry();
+	virtual ~DirEntry();
 
 	int writeDE(char* page,long id);
 	static vector<DirEntry*> getAllEntries(char *buf, long totalDEs);
@@ -85,6 +85,8 @@ public:
 	int findNextPartialPage(int start,int recLen);
 
 	void updateMaximumSpaceParam();
+
+	void deleteAll();
 };
 
 } /* namespace datamodels */

@@ -33,23 +33,34 @@ bool setDataDirectory(int argc, char *argv[]){
 	return true;
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char* argv[]){
 	string stmt;
 	string substmt;
 	Parser p;
+	timeval startTime, endTime;
+	double elapsedTime;
+	char* buf = NULL;
+	int response = 0;
+
 	if(!setDataDirectory(argc, argv)){
 		exit(-1);
 	}
+
 	do{
-		cout << "OurSQL $ ";
-		getline(cin, stmt);
+		stmt = "";
+		buf = readline("OurSQL$: ");
+		stmt.append(buf);
+		stmt = trim(stmt);
+
+		free (buf);
+
 		//shortcuts for testing.
 		if(stmt[0]=='.'){
 			if(stmt[1]=='.'){
-				stmt = "use test;";
+				stmt = "use iiitb;";
 			}
 			else if(stmt[1]=='a'){
-				stmt = "show tables;";
+				stmt = "show details;";
 			}
 
 			else if(stmt[1]=='s'){
@@ -64,19 +75,33 @@ int main(int argc, char *argv[]){
 			}
 
 			else if(stmt[1]=='t'){
-				stmt = "update sam set age=24, mark=98 where age=23;";
+				stmt = "import from test_.sql;";
+				//stmt = "import from create_member.sql;";
 			}
 		}//end shortcuts
 
 		while(stmt[stmt.size()-1]!=';'){
-			cout << "     >";
-			getline(cin,substmt);
-			if(substmt.size()>0){
+			buf = readline("       >");
+			if(buf!=NULL&&strlen(buf)>0){
 				if(stmt.size()>0) stmt.append(" ");
-				stmt.append(substmt);
+				stmt.append(buf);
 			}
+			free(buf);
 		}
 
-	}while(p.parse(stmt)!=0);
+		add_history(stmt.c_str());
+		gettimeofday(&startTime,NULL);
+		response = p.parse(stmt);
+		gettimeofday(&endTime,NULL);
+
+		if(response == 2){
+			elapsedTime = (endTime.tv_sec - startTime.tv_sec);      // sec
+			elapsedTime += (endTime.tv_usec - startTime.tv_usec) / 1000000.0;   // us to s
+			cout << "Query executed in "<<elapsedTime<<" seconds."<<endl;
+		}
+
+	}while(response!=0);
+
+	clear_history();
 	return 0;
 }

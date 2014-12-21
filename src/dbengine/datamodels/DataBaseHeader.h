@@ -18,6 +18,9 @@ namespace datamodels {
 class DataBaseHeader{
 	long noOfTables;
 	long noOfPages;
+	long noOfFreePages;
+	long* freePages;
+	long dbPageSize;
 public:
 	DataBaseHeader();
 	DataBaseHeader(char* fileName, bool newFile);
@@ -26,10 +29,13 @@ public:
 
 	long getNoOfTables();
 	long getNoOfPages();
+	long getDBPageSize();
 
 	void updateTableCount();
 
 	void writeToPage();
+
+	void logDetails();
 };
 
 } /* namespace datamodels */

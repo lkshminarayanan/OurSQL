@@ -19,21 +19,23 @@
 #include <stdlib.h>
 #include "global.h"
 
-#define pageSize 1024*4
-
+extern int pageSize;
 
 using namespace std;
 
 namespace datamodels {
 
-
 class Cache {
 private:
 	fstream db;
 	long pageNum;
+//	string DBName;
+	vector<long> freePages;
+
 	static Cache* cacheInstance;
 	Cache(char* fileName, bool newFile);
 	Cache();
+
 
 public:
 
@@ -46,6 +48,7 @@ public:
 	void setPageNum(long pid);
 
 	char* readPage(long);
+	char* readPageFromIndex(long);//only for index
 	int writePage(long pageid, char* page);
 
 	void readAll();
@@ -53,7 +56,10 @@ public:
 
 	long getPageNum();
 
-
+	void deletePage(long pageId);
+	long* getFreePages();
+	void setFreePages(long *fp,long noOfFreePages);
+	long getCountFreePages();
 };
 
 

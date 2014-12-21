@@ -40,6 +40,9 @@ public:
 public:
 	WhereCond();
 	WhereCond(int attrID, int attrType,int operatorType,char* value);
+	WhereCond(int attrID, int attrType,int operatorType,long value);
+	WhereCond(int attrID, int attrType,int operatorType,string value);
+
 	virtual ~WhereCond();
 
 	bool testRecord(Record *r);//test the record here and send the result
@@ -58,6 +61,7 @@ private:
 	 * 3 - NOT
 	 */
 	vector<WhereCond*> where;
+	int numOfCond;
 public:
 	Where();
 	Where(WhereCond *firstWhere);
@@ -67,6 +71,11 @@ public:
 	int addCondition(int operatorType,WhereCond* whereCond);
 	int isWhereReq();
 	void toString();
+
+	int getNumOfCond();
+	int getFirstCondAttr();
+	char* getFirstCondValue();
+	int getFirstCond();
 };
 
 } /* namespace datamodels */

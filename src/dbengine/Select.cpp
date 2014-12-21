@@ -15,9 +15,18 @@ Select::Select() {
 	slotid = 1;
 	datapageDirEntryid = 0;
 	dirpid = 0;
+	moreFlag = false;
+	indexMode = false;
+	pos = NULL;
+	t_AttrType = NULL;
+	attrType = NULL;
 }
 
-Select::~Select() {}
+Select::~Select() {
+	delete[] pos;
+	delete[] t_AttrType;
+	delete[] attrType;
+}
 
 Select::Select(int *pos,int numOfColumns,int *tAttr, int totalAttrCount){
 	this->pos = pos;
@@ -33,6 +42,7 @@ Select::Select(int *pos,int numOfColumns,int *tAttr, int totalAttrCount){
 	datapageDirEntryid = 0;
 	dirpid = 0;
 	moreFlag = false;
+	indexMode = false;
 }
 
 Select::Select(vector<int> pos,int numOfColumns,vector<int> tAttr, int totalAttrCount){
@@ -51,18 +61,45 @@ Select::Select(vector<int> pos,int numOfColumns,vector<int> tAttr, int totalAttr
 	datapageDirEntryid = 0;
 	dirpid = 0;
 	moreFlag = false;
+	indexMode = false;
 }
 
+void Select::updateParamsForSelectStar(int numOfColumns,vector<int> tAttr, int totalAttrCount){
+	int n,i;
 
-Record* Select::project(Record* record){
+	n = tAttr.size();
+	this->t_AttrType = new int[n];
+	for(i=0;i<n;i++){
+		this->t_AttrType[i] = tAttr[i];
+	}
+
+	this->numOfColumns = numOfColumns;
+	this->t_NumOfAttributes = totalAttrCount;
+	attrType = new int[numOfColumns];
+	for(int i = 0;i < numOfColumns; i++){
+		attrType[i] = t_AttrType[pos[i]];
+	}
+}
+
+Record* Select::project(Record* record, long pageID, int slotID){
 	if(numOfColumns == 0)
 		return record;
 	Record *newR = new Record();
 	vector<char*> values = record->getValues();
+
 	for(int i = 0;i< numOfColumns;i++){
 		newR->addValue(values[pos[i]],attrType[i]);
 	}
+
+	if(indexMode){
+		//Works only for single column index
+		newR->addValue(pageID,2);
+		newR->addValue(slotID,2);
+	}
+
+	delete record;
 	return newR;
+
 }
 
 void Select::setLimit(long limit){
@@ -95,6 +132,10 @@ void Select::setStartSlotID(int sid){
 
 int Select::getStartSlotId(){
 	return slotid;
+}
+
+int* Select::getProjectPos(){
+	return pos;
 }
 
 int* Select::getAttrType(){
@@ -139,6 +180,14 @@ void Select::initializeStartParams(){
 	datapageDirEntryid = 0;
 	dirpid = 0;
 	moreFlag = false;
+}
+
+void Select::setIndexModeOff(){
+	indexMode = false;
+}
+
+void Select::setIndexModeOn(){
+	indexMode = true;
 }
 
 } /* namespace datamodels */

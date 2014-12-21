@@ -14,15 +14,9 @@ DirPage::DirPage() {
 	prevPage = 0;
 	maxSpaceAvailable = 0;
 	DEcount = 0;
-	//offset of the start of contiguous free space from 'c'
-	//The Storage Area
-	writeToPage();
-	dirEntries = DirEntry::getAllEntries(p,DEcount);
-	for(unsigned long i = 0;i<DEcount;i++){
-		lg2("");
-		lg2("DEs: "<< i<<" " << dirEntries[i]->getPageID() << " "<<dirEntries[i]->getTFS());
 
-	}
+	memcpy(p,this,sizeof(DirPage));
+	writeToPage();
 	printDetails();
 }
 
@@ -42,6 +36,18 @@ DirPage::DirPage(long pid):Page(pid){
 	}
 
 	printDetails();
+
+	delete []buf;
+}
+
+DirPage::~DirPage() {
+	// TODO Auto-generated destructor stub
+	int n = dirEntries.size();
+	for(int i=0;i<n;i++){
+		delete dirEntries[i];
+	}
+	writeToPage();
+	//delete [] p;
 }
 
 long DirPage::getDEcount(){
@@ -54,11 +60,6 @@ vector<DirEntry*> DirPage::getDirEntries(){
 
 long DirPage::getMaxSpaceAvailable(){
 	return maxSpaceAvailable;
-}
-
-DirPage::~DirPage() {
-	// TODO Auto-generated destructor stub
-	delete [] p;
 }
 
 DirPage* DirPage::getNextPage(){
@@ -126,6 +127,8 @@ int DirPage::insertRecords(RecordSet* rs, int s){
 	vector<Record*> rec = rs->getAllRecords();
 	int *attrType = rs->getAttrType();
 
+	char *recStr;
+
 	for(i=s;i<n;i++){
 		recLen = rec[i]->getSize();
 		dpNum = findNextPartialPage(start,recLen);//find the first partial page
@@ -147,10 +150,11 @@ int DirPage::insertRecords(RecordSet* rs, int s){
 			dp = new DataPage(dirEntries[dpNum]->getPageID());
 			start = dpNum;
 		}
-		sid = dp->insertRecord(rec[i]->toRecordString(attrType),rec[i]->getSize());
+		recStr = rec[i]->toRecordString(attrType);
+		sid = dp->insertRecord(recStr,rec[i]->getSize());
+		delete[] recStr;
 		if(sid!=-1){
 			//successful insertion
-			//TODO:use slotid to store somewhere.
 			//update dirPage entries.
 			lg("@DirPage Insertion: Record "<<i<<" - inserted in DataPage "<<dp->getPageid());
 
@@ -165,7 +169,7 @@ int DirPage::insertRecords(RecordSet* rs, int s){
 			i--;//so the same record will be referenced again
 			start++;//search from next page!
 		}
-		delete dp;
+		if(dp!=NULL) delete dp;
 	}
 	writeToPage();
 	return i - s;
@@ -288,6 +292,21 @@ long DirPage::updateRecords(Where *where, Modify *modify, RecordSet* rs){
 	return noOfRecs;
 }
 
+void DirPage::deleteAll(){
+	if(DEcount == 0){
+		lg2("@DirPage_"<<pageid<<" : No Pages to delete.");
+		return;
+	}
+	Cache *cache = Cache::getInstance();
+	//	dirEntries;
+	for(vector<DirEntry*>::size_type i = 0;
+			i<dirEntries.size() ; i++){
+		//create DataPage for every entry and try retreiving records.
+		cache->deletePage(dirEntries[i]->getPageID());
+
+	}
+}
+
 
 
 /*
@@ -308,6 +327,7 @@ DirEntry::DirEntry(long pid,long tfs){
 }
 
 DirEntry::~DirEntry(){
+
 }
 
 int DirEntry::writeDE(char* buf, long id){
@@ -319,13 +339,14 @@ vector<DirEntry*> DirEntry::getAllEntries(char *buf, long totalDEs){
 	vector<DirEntry*> entries;
 	char *loc = buf + sizeof(DirPage);
 	char *temp;
-	DirEntry *de;
+	DirEntry *de_temp;
 	for(int i=0;i<totalDEs;i++){
 		temp = new char[sizeof(DirEntry)];
 		memcpy(temp,loc,sizeof(DirEntry));
-		de = (DirEntry*)temp;
-		entries.push_back(de);
+		de_temp = (DirEntry*)temp;
+		entries.push_back(new DirEntry(de_temp->pageid,de_temp->tfs));// to avoid possible memleaks and make it easier while using delete.
 		loc += sizeof(DirEntry);
+		delete[] temp;
 	}
 	return entries;
 }

@@ -31,6 +31,8 @@ private:
 	int datapageDirEntryid;//datapage - dataentry id to start.
 	int slotid;//slot id to start.
 
+	bool indexMode;
+
 	//table data
 	int *t_AttrType;
 	int t_NumOfAttributes;
@@ -40,7 +42,7 @@ public:
 	Select(int *pos,int numOfSelectAttributes,int *attrType, int totalAttributes);
 	Select(vector<int> pos,int numOfSelectAttributes,vector<int> attrType, int totalAttributes);
 	virtual ~Select();
-	Record* project(Record* actualRecord);
+	Record* project(Record* actualRecord, long pageID, int slotID);
 
 	long getStartDirPageID();
 	int getStartDirEntryID();
@@ -50,6 +52,7 @@ public:
 	void setLimit(long);
 	int getStartSlotId();
 	void setStartSlotID(int sid);
+	int* getProjectPos();
 
 	int* getAttrType();
 	int getNumOfAttr();
@@ -63,6 +66,11 @@ public:
 
 	void logDetails();
 	void initializeStartParams();
+
+	void setIndexModeOn();
+	void setIndexModeOff();
+
+	void updateParamsForSelectStar(int numOfColumns,vector<int> tAttr, int totalAttrCount);
 
 };
 

@@ -18,6 +18,7 @@ DataPage::DataPage(){
 	//The Storage Area
 	c = p + sizeof(DataPage);
 	memcpy(p,this,sizeof(DataPage));
+
 	writePage();
 }
 
@@ -33,6 +34,7 @@ DataPage::DataPage(long pid):Page(pid){
 	contigFreeSpaceStart = dp->contigFreeSpaceStart;
 	c = p + sizeof(DataPage);
 	printDetails();
+	delete [] buf;
 }
 
 
@@ -40,7 +42,6 @@ DataPage::DataPage(long pid):Page(pid){
 DataPage::~DataPage() {
 	// TODO Auto-generated destructor stub
 	writeToPage();
-	delete [] p;
 }
 
 
@@ -134,7 +135,8 @@ int DataPage::insertRecord(char* record, int size ){
 		int bf_diff, bf_diff_temp;//for bestfit
 		bf_diff = pageSize + 1;//for maximum
 		for(int i=1;i<=totalSlots;i++){
-			//whatever happens go until we find a perfect fit!.we need the besttt fittu!.
+			//whatever happens go until we find a perfect fit!.
+			//we need the besttt fittu!.
 			int size = sdp[i]->size;
 			if(size < 0){
 				size *= -1;
@@ -222,17 +224,25 @@ int DataPage::insertRecord(char* record, int size ){
 		slot->writeSlot(p,slotNumber);
 		contigFreeSpaceStart += recLength;
 		contigFreeSize -= tSize;
+		delete slot;
 	}
 
 	UPDATE_PARAMS:
 	totalFreeSize -= tSize;
 	totalRecords++;
 	writeToPage();
+
+	int n = sdp.size();
+	for(int i=0;i<n;i++){
+		delete sdp[i];
+	}
+
 	return slotNumber;//subam
 }
 
 int DataPage::retrieveRecord(int sid, char *&record){
 	//SLOT ID starts from 1.
+	int size;
 	if(sid < 1 || sid > totalSlots){//invalid slotid
 		error("Invalid slot id");
 		record = NULL;
@@ -244,13 +254,18 @@ int DataPage::retrieveRecord(int sid, char *&record){
 	if(sdp->size <= 0){//deleted record
 		error("Invalid slot id (deleted id)");
 		record = NULL;
+		delete sdp;
 		return 0;
 	}
+
 	record = new char[sdp->size+1];
 
 	memcpy(record,c+sdp->offset,sdp->size);
 	record[sdp->size] = '\0';
-	return sdp->size;//Subam
+	size = sdp->size;
+
+	delete sdp;
+	return size;//Subam
 }
 
 int DataPage::deleteRecord(int sid){
@@ -269,6 +284,8 @@ int DataPage::deleteRecord(int sid){
 	sdp->writeSlot(p,sid);
 	lg("Record at slot "<<sid<<" deleted");
 	writeToPage();
+
+	delete sdp;
 	return 1;
 }
 
@@ -308,6 +325,12 @@ int DataPage::defragmentPage(){
 	contigFreeSpaceStart = loc - locHead;
 	contigFreeSize = totalFreeSize;
 	memcpy(c,locHead,totalLen);
+
+	delete[] locHead;
+	int n = sdp.size();
+	for(i=0;i<n;i++){
+		delete sdp[i];
+	}
 	writeToPage();
 	return 1;
 }
@@ -337,12 +360,12 @@ int DataPage::retrieveRecords(RecordSet *rs,Select* select,Where* where){
 		recSize = retrieveRecord(i,recStr);
 		if (recSize!=0){
 			record = new Record(attrType_table,recStr,numOfAttr_table,recSize);
-			//TODO : check for valid records here!
 			if(where->testRecord(record)){
 				lg2("Adding Record "<<i<<" from Page "<<pageid);
-				//select->logDetails();
-				rs->addRecord(select->project(record));
+				rs->addRecord(select->project(record,pageid,i));
 				noOfRecs ++;
+			}else{
+				delete record;
 			}
 		}
 		if(select->getLimit()!=0&&noOfRecs >= select->getLimit()){
@@ -350,6 +373,7 @@ int DataPage::retrieveRecords(RecordSet *rs,Select* select,Where* where){
 			select->thereIsMore();
 			return noOfRecs;
 		}
+		delete[] recStr;
 	}
 	if(select->getLimit()!=0)
 		select->setLimit(select->getLimit()-noOfRecs);
@@ -380,7 +404,9 @@ int DataPage::deleteRecords(Where *where,int* attrType, int numOfAttr){
 				deleteRecord(i);
 				noOfRecs ++;
 			}
+			delete record;
 		}
+		delete[] recStr;
 	}
 	writeToPage();
 	return noOfRecs;
@@ -400,12 +426,14 @@ int DataPage::updateRecords(Where *where,Modify *modify, RecordSet* rs){
 		recSize = retrieveRecord(i,recStr);
 		if (recSize!=0){
 			record = new Record(modify->getAttrType(),recStr,modify->getNumOfAttr(),recSize);
-			//TODO : check for valid records here!
+			//check for valid records here!
 			if(where->testRecord(record)){
 				lg2("Updating and deleting Record "<<i<<" from Page "<<pageid);
 				rs->addRecord(modify->updateRecord(record));
 				deleteRecord(i);
 				noOfRecs ++;
+			}else{
+				delete record;
 			}
 		}
 		if(noOfRecs == modify->getLimit()){
@@ -414,6 +442,7 @@ int DataPage::updateRecords(Where *where,Modify *modify, RecordSet* rs){
 			modify->setStartSlotID(i+1);
 			return noOfRecs;
 		}
+		delete[] recStr;
 	}
 	writeToPage();
 
@@ -446,6 +475,7 @@ SlotDir::SlotDir(char* buf, int sid){
 	SlotDirPtr sdp = (SlotDirPtr)slot;
 	offset = sdp->offset;
 	size = sdp->size;
+	delete []slot;
 }
 int SlotDir::writeSlot(char* buf, int sid){
 	char* slot_entry = buf + pageSize - (sid)*SLOT_SZ;
@@ -463,7 +493,8 @@ vector<SlotDirPtr> SlotDir::getAllSlots(char* buf, int totalSlots){
 		slot = new char[ sizeof(SlotDir) ] ;
 		memcpy(slot,slotLoc,sizeof(SlotDir));
 		sdp = (SlotDirPtr)slot;
-		sDir.push_back(sdp);
+		sDir.push_back(new SlotDir(sdp->offset,sdp->size));
+		delete[] slot;
 	}
 	return sDir;
 }
@@ -483,14 +514,17 @@ void SlotDir::printAllSlots(char* buf, int totalSlots){
 int SlotDir::getEmptySlotID(char* buf,int totalSlots){
 	char* slotLoc = buf + pageSize - SLOT_SZ;//slot no. 1!
 	int i = 1;
-	char* slot = new char[ sizeof(SlotDir) ] ;;
+	char* slot = new char[ sizeof(SlotDir) ] ;
 	SlotDirPtr sdp;
 	for (i=1;i<=totalSlots;i++,slotLoc = slotLoc - sizeof(SlotDir)){
 		memcpy(slot,slotLoc,sizeof(SlotDir));
 		sdp = (SlotDirPtr)slot;
-		if(sdp->size == 0)
+		if(sdp->size == 0){
+			delete[] slot;
 			return i;
+		}
 	}
+	delete[] slot;
 	return 0;
 }
 

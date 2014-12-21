@@ -30,7 +30,13 @@ public:
 	Modify();
 	Modify(int* attrType, int numOfAttr);
 	Modify(vector<int> attrType, int numOfAttr);
+	virtual ~Modify();
+
 	int addUpdatedValues(char* data, int pos);
+	int addUpdatedValues(long data, int pos);
+	int addUpdatedValues(float data, int pos);
+	int addUpdatedValues(string data, int pos);
+	int addUpdatedValues(int data, int pos);
 
 	Record* updateRecord(Record* record);
 

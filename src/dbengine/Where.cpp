@@ -9,17 +9,42 @@
 
 namespace dbEngine {
 
-WhereCond::WhereCond() {}
+WhereCond::WhereCond() {
+	this->attrID = -1;
+}
 
 WhereCond::WhereCond(int attrID, int attrType, int opID, char* value){
 	this->attrID = attrID;
 	this->op = opID;
 	this->attrType = attrType;
-	this->value = value;
+
+	char *data = new char[strlen(value)+1];
+	strcpy(data,value);
+
+	this->value = data;
+}
+
+WhereCond::WhereCond(int attrID, int attrType, int opID, long value){
+	this->attrID = attrID;
+	this->op = opID;
+	this->attrType = attrType;
+	char *data = new char[25];
+	sprintf(data,"%ld",value);
+	this->value = data;
+}
+
+WhereCond::WhereCond(int attrID, int attrType, int opID, string value){
+	this->attrID = attrID;
+	this->op = opID;
+	this->attrType = attrType;
+	char *data = new char[value.size()+1];
+	strcpy(data,value.c_str());
+	this->value = data;
 }
 
 WhereCond::~WhereCond() {
 	// TODO Auto-generated destructor stub
+	delete [] value;
 }
 
 void WhereCond::toString(){
@@ -31,7 +56,7 @@ void WhereCond::toString(){
 
 bool WhereCond::testRecord(Record *r){
 	char* data = r->getValues()[attrID];
-	double res , data_v, value_v;
+	double res = -1 , data_v, value_v;
 	switch (attrType) {
 	case 1://char*
 		res = strcmp(data,value);
@@ -84,11 +109,18 @@ bool WhereCond::testRecord(Record *r){
 }
 
 
-Where::Where(){}
+Where::Where(){
+	numOfCond = 0;
+}
 Where::Where(WhereCond* firstWhere){
+	numOfCond = 0;
 	addCondition(0,firstWhere);
 }
-Where::~Where(){};
+Where::~Where(){
+	for(int i=0;i<numOfCond;i++){
+		delete where[i];
+	}
+};
 
 bool Where::testRecord(Record *r){
 
@@ -122,6 +154,7 @@ bool Where::testRecord(Record *r){
 int Where::addCondition(int opType,WhereCond *whereCond){
 	operatorType[where.size()]=opType;
 	where.push_back(whereCond);
+	numOfCond ++;
 	return where.size();
 }
 
@@ -136,6 +169,22 @@ void Where::toString(){
 		cout << "\n";
 		where[i]->toString();
 	}
+}
+
+int Where::getNumOfCond(){
+	return numOfCond;
+}
+
+int Where::getFirstCondAttr(){
+	return where[0]->attrID;
+}
+
+char* Where::getFirstCondValue(){
+	return where[0]->value;
+}
+
+int Where::getFirstCond(){
+	return where[0]->op;
 }
 
 } /* namespace datamodels */

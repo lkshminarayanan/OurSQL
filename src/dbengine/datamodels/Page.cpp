@@ -12,6 +12,7 @@ namespace datamodels {
 Page::Page() {
 	Cache* cache = Cache::getInstance();
 	p = new char[pageSize];
+	memset( p, '\0', sizeof(char)*pageSize );
 	pageid = cache->getNewPage();
 	lg2( "Creating page : " << pageid);
 }
@@ -19,15 +20,17 @@ Page::Page() {
 Page::Page(long pid) {
 	pageid = pid;
 	Cache *cache = Cache::getInstance();
-	char* buf = cache->readPage(pid);
-	p = new char[pageSize];
+	p = cache->readPage(pid);
 
-	memcpy(p,buf,pageSize);
+	//memcpy(p,buf,pageSize);
+
+	//delete []buf;
 
 	lg2("Loading page : " << pageid);
 }
 
 Page::~Page() {
+	delete[] p;
 }
 
 char* Page::getPage(){

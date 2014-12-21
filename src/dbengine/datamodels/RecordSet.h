@@ -10,6 +10,8 @@
 #include "global.h"
 #include "Record.h"
 #include <vector>
+#include <iomanip>
+#include <algorithm>
 using namespace std;
 
 namespace datamodels {
@@ -24,6 +26,7 @@ private:
 	int numOfAttr;
 	vector<Record*> records;
 	bool colNameExist;
+	int* printWidth;
 public:
 	RecordSet();
 	RecordSet(int* attrType, int numOfAttr);
@@ -41,9 +44,17 @@ public:
 
 	int getSizeOf(unsigned recNo);
 
-	void setAttrName(vector<char*> aName);
+	void setAttrName(vector<char*> aName, int numAttr, int* pos);
 	void printAll(int start, int limit);
+	void printAllIndex(int start, int limit);
+	void updatePrintWidth(vector<int> valSize);
+
+	void sortResult(int attrID);
+
+	void clearAllRecs();
 };
+
+int compare(char* valOne, char* valTwo, int valType);
 
 } /* namespace datamodels */
 #endif /* RECORDSET_H_ */

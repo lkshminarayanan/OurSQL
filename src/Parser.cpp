@@ -7,8 +7,15 @@
 
 #include "Parser.h"
 
-
 namespace dbEngine {
+
+static std::string toLowerCase( const std::string& in )
+{
+	std::string out;
+
+	std::transform( in.begin(), in.end(), std::back_inserter( out ), ::tolower );
+	return out;
+}
 
 Parser::Parser() {
 	dbs = NULL;
@@ -83,7 +90,7 @@ int Parser::parse(string stmt){
 
 	//std::transform(stmt.begin(), stmt.end(), stmt.begin(), ::tolower);
 
-	if((stmt.at(stmt.size()-1)!=';')||stmt.size()<2){
+	if((stmt.size()==0||stmt.at(stmt.size()-1)!=';')||stmt.size()<2){
 		cmderror;
 		return 1;
 	}
@@ -108,7 +115,7 @@ int Parser::parse(string stmt){
 
 			}else{
 				if (pos > prev)
-					tokens.push_back(item.substr(prev, pos-prev));
+					tokens.push_back(toLowerCase(item.substr(prev, pos-prev)));
 
 				if(item[pos]=='\''){
 					readingVarchar = true;
@@ -123,100 +130,220 @@ int Parser::parse(string stmt){
 			if(readingVarchar){
 				tokens[tokens.size()-1].append(item.substr(prev, std::string::npos));
 			}else{
-				tokens.push_back(item.substr(prev, std::string::npos));
+				tokens.push_back(toLowerCase(item.substr(prev, std::string::npos)));
 			}
 
 		}
 	}
 
-	if(tokens[0].compare("exit")==0||(tokens[0].compare("quit")==0)){
-		cout << endl<< "Bye!\n";
-		actUpon(0,tokens);
-		return 0;
-	}
+	try
+	{
+		if(tokens[0].compare("exit")==0||(tokens[0].compare("quit")==0)){
+			cout << endl<< "Bye!\n";
+			actUpon(0,tokens);
+			return 0;
+		}
 
-	//return 1;
+		else if(tokens.at(0).compare("create")==0){
+
+			if(tokens.at(1).compare("database")==0){
+				if(isAlpha(tokens.at(2))&&tokens.size()==3)
+					actUpon(1,tokens);
+				else{
+					cmderror;
+					return 1;
+				}
+			}
+
+			else if(tokens.at(1).compare("table")==0){
+				//create table tblname (col1 col1type[],col2 col2type[],..);
+				if(!isAlpha(tokens.at(2))){
+					cmderror;
+					return 1;
+				}else
+					actUpon(4,tokens);
+
+			}
+
+			else{
+				cmderror;
+			}
+		}
 
 
-	else if(tokens[0].compare("create")==0){
-		if(tokens[1].compare("database")==0){
-			if(isAlpha(tokens[2])&&tokens.size()==3)
-				actUpon(1,tokens);
+		else if(tokens.at(0).compare("use")==0&&isAlpha(tokens.at(1))){
+			if(tokens.size()>2){
+				cmderror;
+			}else{
+				actUpon(2,tokens);
+			}
+		}
+
+		else if((tokens.at(0).compare("show")==0)){
+			if((tokens.at(1).compare("tables")==0)&&tokens.size()==2)
+				actUpon(3,tokens);
+			else if((tokens.at(1).compare("columns")==0)&&(tokens.at(2).compare("from")==0)&&tokens.size()==4&&isAlpha(tokens.at(3))){
+				actUpon(10,tokens);
+			}
+			else if(tokens.at(1).compare("databases")==0&&tokens.size()==2){
+				actUpon(11,tokens);
+			}
+			else if(tokens.at(1).compare("details")==0&&tokens.size()==2){
+				actUpon(25,tokens);
+			}
+			else{
+				cmderror;
+			}
+		}
+
+		else if((tokens.at(0).compare("insert")==0)&&(tokens.at(1).compare("into")==0)){
+			if(!isAlpha(tokens.at(2))){
+				cmderror;
+				return 1;
+			}else
+				actUpon(5,tokens);
+		}
+
+		else if((tokens.at(0).compare("select"))==0){
+			actUpon(6,tokens);
+			return 2;
+		}
+
+		else if((tokens.at(0).compare("delete"))==0&&(tokens.at(1).compare("from"))==0&&isAlpha(tokens.at(2))){
+			actUpon(7,tokens);
+		}
+
+		else if((tokens.at(0).compare("update"))==0&&isAlpha(tokens.at(1))&&(tokens.at(2).compare("set"))==0){
+			actUpon(8,tokens);
+		}
+
+		else if(tokens.size()>3&&(tokens.at(0).compare("alter"))==0&&(tokens.at(1).compare("table"))==0&&isAlpha(tokens.at(2))){
+			if(tokens.at(3).compare("rename")==0){
+				if(tokens.size()==6&&tokens.at(4).compare("to")==0&&isAlpha(tokens.at(5))){
+					actUpon(14,tokens);
+				}
+
+				else if(tokens.size()==8&&tokens.at(4).compare("column")==0&&isAlpha(tokens.at(5))&&tokens.at(6).compare("to")==0&&isAlpha(tokens.at(7))){
+					actUpon(15,tokens);
+				}
+
+				else{
+					cmderror;
+					return 1;
+				}
+			}
+
+			else if(tokens.at(3).compare("add")==0){
+				actUpon(16,tokens);
+			}
+
+			else if(tokens.size()==6&&tokens.at(3).compare("drop")==0&&tokens.at(4).compare("column")==0&&isAlpha(tokens.at(5))){
+				actUpon(17,tokens);
+			}
+
 			else{
 				cmderror;
 				return 1;
 			}
 		}
 
-		else if(tokens[1].compare("table")==0){
-			//create table tblname (col1 col1type[],col2 col2type[],..);
-			if(!isAlpha(tokens[2])){
+		else if((tokens.at(0).compare("drop"))==0&&tokens.size()<6){
+			if(tokens.at(1).compare("database")==0)
+				actUpon(12,tokens);
+
+			else if(tokens.at(1).compare("table")==0&&tokens.size()==3&&isAlpha(tokens.at(2))){
+				actUpon(13,tokens);
+			}
+
+			else{
 				cmderror;
-				return 1;
-			}else
-				actUpon(4,tokens);
-
+			}
 		}
-	}
 
+		else if(tokens.at(0).compare("import")==0&&tokens.at(1).compare("from")==0){
+			loadFromFile(tokens.at(2));
+		}
 
-	else if(tokens[0].compare("use")==0){
-		if(tokens.size()>2){
-			cmderror;
-		}else{
-			actUpon(2,tokens);
+		else if(tokens.size()==2&&tokens.at(0).compare("close")==0&&tokens.at(1).compare("database")==0){
+			actUpon(0,tokens);
+			dbs = NULL;
+			cout << "Database Closed.\n";
 		}
-	}
 
-	else if((tokens[0].compare("show")==0)){
-		if((tokens[1].compare("tables")==0)&&tokens.size()==2)
-			actUpon(3,tokens);
-		else if((tokens[1].compare("columns")==0)&&(tokens[2].compare("from")==0)&&tokens.size()==4&&isAlpha(tokens[3])){
-			actUpon(10,tokens);
+		else if(tokens.at(0).compare("@cache")==0){
+			if(tokens.size()==4&&tokens.at(1).compare("set")==0&&tokens.at(2).compare("pagesize")==0&&isReal(tokens.at(3))){
+				long pSize = atol(tokens.at(3).c_str());
+				if(dbs==NULL){
+					if(pSize>0){
+
+						pageSize = pSize;
+						cout << "PageSize set to "<<pageSize<<".\n";
+					}else{
+						cout << "Error in setting PageSize\n";
+					}
+				}else{
+					cout << "Unable to change PageSize. Please close any open DB and try again.\n";
+				}
+			}
+
+			else if(tokens.size()==3&&tokens.at(1).compare("show")==0&&tokens.at(2).compare("pagesize")==0){
+				cout << "PageSize is "<<pageSize<<".\n";
+			}
 		}
-		else if(tokens[1].compare("databases")==0&&tokens.size()==2){
-			actUpon(11,tokens);
-		}
+
 		else{
+			//final catch
 			cmderror;
 		}
-	}
-
-	else if((tokens[0].compare("insert")==0)&&(tokens[1].compare("into")==0)){
-		if(!isAlpha(tokens[2])){
-			cmderror;
-			return 1;
-		}else
-			actUpon(5,tokens);
-	}
-
-	else if((tokens[0].compare("select"))==0){
-		actUpon(6,tokens);
-	}
-
-	else if((tokens[0].compare("delete"))==0&&(tokens[1].compare("from"))==0&&isAlpha(tokens[2])){
-		actUpon(7,tokens);
-	}
-
-	else if((tokens[0].compare("update"))==0&&isAlpha(tokens[1])&&(tokens[2].compare("set"))==0){
-		actUpon(8,tokens);
-	}
-
-	else if((tokens[0].compare("drop"))==0&&tokens.size()==3){
-		if(tokens[1].compare("database")==0)
-			actUpon(12,tokens);
-		else{
-			cmderror;
-		}
-	}
-
-	else{
-		//final catch
+	}catch(std::out_of_range &x){
 		cmderror;
+		return 1;
 	}
 
 	return 1;
 }
+
+void Parser::loadFromFile(string fileName){
+	string ipFile = fileName;
+	struct stat buf;
+	string line;
+	string query;
+	char *log = new char[ipFile.size()+5];
+	strcpy(log,ipFile.c_str());
+	strcat(log,".log");
+	if (stat(ipFile.c_str(), &buf) != -1){
+		//exists
+		freopen (log,"w",stdout);
+		ifstream sqlfile (ipFile.c_str());
+		long x = 0;
+		if (sqlfile.is_open()){
+			while ( !sqlfile.eof() ){
+				query = "";
+				do{
+					getline (sqlfile,line);
+					x++;
+					//cout << x<<endl;
+					query.append(" ");
+					query.append(trim(line));
+				}while(!sqlfile.eof()&&query[query.size()-1]!=';');
+				if(query.size()>0){
+					//cout << "=="<<query<<"==\n";
+					parse(query);
+				}
+			}
+			sqlfile.close();
+			freopen("/dev/tty", "a", stdout);
+			cout <<"Log written to "<< log<<endl;
+		}else{
+			cout << "Unable to open file."<<endl;
+		}
+	}else{
+		cout << "File does not exists\n";
+	}
+	delete[] log;
+	return;
+}
+
 
 Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vector<int> colTypes, unsigned i){
 	Where *where = new Where();
@@ -322,6 +449,7 @@ Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vec
 		strcpy(value,tokens[i].data());
 		wc = new WhereCond(itPos-colNames.begin(),colTypes[itPos-colNames.begin()],op,value);
 		where->addCondition(WhereConjuction,wc);
+		delete[] value;
 		i++;
 
 	}while(i!=tokens.size());
@@ -331,8 +459,6 @@ Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vec
 
 void Parser::actUpon(int ch,vector<string> tokens){
 	char dbName[100];
-	Select *select = new Select();
-	Where *where = new Where();
 
 	switch(ch){
 	case 0:
@@ -357,9 +483,17 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		if(dbs != NULL)
 			delete dbs;
 		dbs = new DataBaseServer(dbName,false);
-		if(dbs->isValid()){
+		if(dbs->isValid()==1){
 			cout << dbName<<" Loaded"<<endl;
+		}
+
+		else if(dbs->isValid()==-1){
+			delete dbs;
+			dbs = NULL;
+
 		}else{
+			delete dbs;
+			dbs = NULL;
 			cout <<  "Error!"<< dbName<<" does not exist."<<endl;
 		}
 		break;
@@ -435,18 +569,16 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				}
 			}
 
-
-			//create table x(col1 int, col2 int(12),col3 varchar(10),col5 varchar(15),col6 real, col6 float(10));
-
-
-
 			Table *tbl = new Table(tableName, aName, maxSize, aType,dbs);
 			if(tbl->getDirPageHeader()==NULL){
 				cout << "Cannot create Table. Duplicate Table Name."<<endl;
+				for(unsigned i=0;i<aName.size();i++){
+					delete[] aName[i];
+				}
 			}else{
 				cout << "Table '"<<tableName<<"' created."<<endl;
-				delete tbl;
 			}
+			delete tbl;
 		}
 		break;
 	case 5://insert into
@@ -458,17 +590,20 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			vector<int> attrType;
 			vector<string> attrName;
 			vector<string> ipAttrNames;
-			char tableName[100];
+			char* tableName;
 			vector<char*> aName;
 			vector<char*> values;
 			vector<int> pos;
 			int ipNum = 0;
 			bool hasColumnNames = false;
 
+			tableName = new char[tokens[2].size() + 1];
 			strcpy(tableName,tokens[2].c_str());
 			Table *tbl = new Table(tableName,dbs);
+			delete[] tableName;
 			if(tbl->getDirPageHeader()==NULL){
 				cout << "Table does not exist."<<endl;
+				delete tbl;
 			}else{
 				noOfattr = tbl->getNumOfAttr();
 				//cout << "Total Attributes :"<<noOfattr;
@@ -478,13 +613,14 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				if(tokens[i][0]=='('){
 
 					//start getting attribute names
-					cout << "getting names";
+					//cout << "getting names";
 					i++;
 					do{
 						if(isAlpha(tokens[i])){
 							ipAttrNames.push_back(tokens[i]);
 							i += 2;
 						}else{
+							delete tbl;
 							cmderror;
 							return;
 						}
@@ -499,6 +635,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					ipNum = ipAttrNames.size();
 				}else{
 					//not both?. error it is.
+					delete tbl;
 					cmderror;
 					return;
 				}
@@ -515,14 +652,9 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					}
 				}
 
-				for(int j=0;j<ipNum;j++)
-					cout << ipAttrNames[j] <<endl;
-
-				for(unsigned j=0;j<pos.size();j++)
-					cout << pos[j] <<endl;
-
 				if(hasColumnNames&&(pos.size()!=ipAttrNames.size())){
 					cout << "Invalid Column Names"<<endl;
+					delete tbl;
 					return;
 				}
 
@@ -536,6 +668,8 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				i++;//skip "values"
 				do{//it comes here iff its value;
 					if(tokens[i][0]!='('){
+						delete tbl;
+						delete rs;
 						cmderror;
 						return;
 					}
@@ -552,6 +686,8 @@ void Parser::actUpon(int ch,vector<string> tokens){
 							toklen = tokens[i].length()-1;
 							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
 								cout << "Invalid Values."<<endl;
+								delete tbl;
+								delete rs;
 								return;
 							}else{
 								tokens[i]=tokens[i].substr(1,toklen-1);
@@ -560,12 +696,16 @@ void Parser::actUpon(int ch,vector<string> tokens){
 						case 2:
 							if(!isInt(tokens[i])){
 								cout << "Invalid Values."<<endl;
+								delete tbl;
+								delete rs;
 								return;
 							}
 							break;
 						case 3:
 							if(!isReal(tokens[i])){
 								cout << "Invalid Values."<<endl;
+								delete tbl;
+								delete rs;
 								return;
 							}
 							break;
@@ -580,6 +720,8 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					}while(tokens[i][0]==',');
 
 					if(k!=ipNum){
+						delete tbl;
+						delete rs;
 						cmderror;
 						return;
 					}
@@ -593,33 +735,37 @@ void Parser::actUpon(int ch,vector<string> tokens){
 									data = new char[values[k].size()+1];
 									strcpy(data,values[k].c_str());
 									r->addValue(data,attrType[j]);
+									delete[] data;
 									break;
 								}
 							}
-							if(k==ipNum){
-								//never went inside
-								char* blank = new char[1];
-								strcpy(blank, "");
-								r->addValue(blank,attrType[j]);
-							}
+							if(k==ipNum)//never went inside
+								r->addValue("",attrType[j]);
 						}
 					}else{
 						for(int j=0;j<noOfattr;j++){
 							data = new char[values[j].size()+1];
 							strcpy(data,values[j].c_str());
 							r->addValue(data,attrType[j]);
+							delete[] data;
 						}
 					}
 
 					rs->addRecord(r);
 
 					if(tokens[i++][0]!=')'){
+
+						delete tbl;
+						delete rs;
 						cmderror;
 						return;
 					}
 
 					if(i!=tokens.size()){
 						if(tokens[i++][0]!=','){
+
+							delete tbl;
+							delete rs;
 							cmderror;
 							return;
 						}
@@ -628,7 +774,9 @@ void Parser::actUpon(int ch,vector<string> tokens){
 
 				}while(1);
 				//rs->printAll(0,rs->getNumOfRecords());
-				cout << tbl->insertTuples(rs) << " records inserted."<<endl;
+				cout << tbl->insertTuples(rs) << " records inserted.\n";
+
+				delete rs;
 				delete tbl;
 			}
 		}
@@ -639,13 +787,16 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			cout <<"No Database Loaded."<<endl;
 
 		}else{
-			//cout << "Where "<< (std::find(tokens.begin(),tokens.end(),"where"))-tokens.begin();
 			vector<string>::iterator itPos;
 			char *tableName = new char[100];
 			unsigned i;
 			vector<string> colNames;
 			vector<int> colTypes;
 			vector<int> pos;
+
+			Select *select = new Select();
+			Where *where;
+
 
 			itPos = std::find(tokens.begin(),tokens.end(),"from");
 			if(itPos ==tokens.end()){
@@ -656,15 +807,25 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			//valid from:
 			i = itPos - tokens.begin();
 
+			i++;//go to table name
 
-			strcpy(tableName,tokens[++i].c_str());
-			Table *tbl = new Table(tableName,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout <<"Table does'nt exist."<<endl;
+			if(!isAlpha(tokens.at(i))){
+				cout << "Invalid table name.\n";
+				delete[] tableName;
+				delete select;
 				return;
 			}
 
-			//if table exists
+			strcpy(tableName,tokens[i].c_str());
+
+			Table *tbl = new Table(tableName,dbs);
+			if(tbl->getDirPageHeader()==NULL){
+				cout <<"Table does'nt exist."<<endl;
+				delete[] tableName;
+				delete select;
+				delete tbl;
+				return;
+			}
 
 			colNames = tbl->getAttributeNamesString();
 			colTypes = tbl->getAttributeTypes();
@@ -678,9 +839,15 @@ void Parser::actUpon(int ch,vector<string> tokens){
 						return;
 					}
 				}else{
+					delete[] tableName;
+					delete select;
+					delete tbl;
+					return;
 					cmderror;
 					return;
 				}
+			}else{
+				where = new Where();
 			}
 
 			//where->toString();
@@ -689,6 +856,10 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			if(tokens[1][0]=='*'){
 				if(tokens[2].compare("from")!=0){
 					//error syntax
+					delete[] tableName;
+					delete select;
+					delete tbl;
+					delete where;
 					cmderror;
 					return;
 				}
@@ -703,6 +874,10 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					//itPos = std::find(colNames.begin(),colNames.end(),tokens[++i]);
 					if(colPos == -1){
 						cout << "Invalid Column Names"<<endl;
+						delete[] tableName;
+						delete select;
+						delete tbl;
+						delete where;
 						return;
 					}else{
 						pos.push_back(colPos);
@@ -710,24 +885,50 @@ void Parser::actUpon(int ch,vector<string> tokens){
 
 				}while(tokens[++i][0]==',');
 				if(tokens[i].compare("from")!=0){
+					delete[] tableName;
+					delete select;
+					delete tbl;
+					delete where;
 					cmderror;
 					return;
 				}
 
+				delete select;//deleting the previous select.
 				select = new Select(pos,pos.size(),colTypes,colTypes.size());
 
 			}
 
 			else{
+				delete[] tableName;
+				delete select;
+				delete tbl;
+				return;
+				delete where;
 				cmderror;
 				return;
 			}
 
-			RecordSet *rs = tbl->selectTuples(select,where);
-			rs->printAll(0,rs->getNumOfRecords());
+			RecordSet *rs;
 
+			string choice;
 
+			do{
+				rs = tbl->selectTuples(select,where);
 
+				rs->printAll(0,rs->getNumOfRecords());
+
+				if(select->isThereMore()){
+					cout << "Get More?(Y/N) : ";
+					cin >> choice;
+				}
+
+			}while(select->isThereMore()&&(choice.at(0)=='y'||choice.at(0)=='Y'));
+
+			delete rs;
+			delete tbl;
+			delete select;
+			delete where;
+			delete[] tableName;
 		}
 		break;
 	case 7: /*delete from x where */
@@ -741,7 +942,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				cout <<"Table does'nt exist."<<endl;
 			}else{
 
-				Where *where = new Where();
+				Where *where;
 
 				vector<string> colNames;
 				vector<int> colTypes;
@@ -761,11 +962,16 @@ void Parser::actUpon(int ch,vector<string> tokens){
 						cmderror;
 						return;
 					}
+				}else{
+					where = new Where();
 				}
 
-				cout << tbl->deleteTuples(where,colTypes,colTypes.size()) <<" rows deleted."<<endl;
+				cout << tbl->deleteTuples(where) <<" rows deleted."<<endl;
 
+				delete where;
 			}
+			delete tbl;
+			delete[] tableName;
 		}
 		break;
 	case 8://modify
@@ -778,12 +984,9 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			if(tbl->getDirPageHeader()==NULL){
 				cout <<"Table does'nt exist."<<endl;
 			}else{
-
-
-
 				vector<string> colNames;
 				vector<int> colTypes;
-				int i = 3;//update tblname set
+				unsigned i = 3;//update tblname set
 				int pos = -1;
 
 				colNames = tbl->getAttributeNamesString();
@@ -792,7 +995,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				int toklen;
 				char *value;
 
-				Where *where = new Where();
+				Where *where;
 				Modify *modify = new Modify(colTypes,colTypes.size());
 
 				do{
@@ -837,8 +1040,13 @@ void Parser::actUpon(int ch,vector<string> tokens){
 						value = new char[100];
 						strcpy(value,tokens[i].data());
 						modify->addUpdatedValues(value,pos);
+						delete[] value;
 					}
-					if(tokens[++i][0]==','){
+					if(tokens.size()==++i){
+						break;
+					}
+
+					else if(tokens[i][0]==','){
 						i++;
 					}
 
@@ -853,14 +1061,26 @@ void Parser::actUpon(int ch,vector<string> tokens){
 					}
 
 				}while(1);
-				where = prepareWhere(tokens,colNames,colTypes,i);
+				if(tokens.size()!=i)
+					where = prepareWhere(tokens,colNames,colTypes,i);
+				else{
+					where = new Where();
+				}
 
 
 				cout << tbl->updateTuples(where,modify) << " records updated."<<endl;
+
+				delete where;
+				delete modify;
 			}
+			delete tbl;
 		}
 		break;
-	case 10:
+	case 9://create index
+		//Not supported yet
+		break;
+
+	case 10: //show columns from tables
 		if(dbs == NULL){
 			cout <<"No Database Loaded."<<endl;
 		}else{
@@ -900,7 +1120,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 			}
 		}
 		break;
-	case 11:
+	case 11://Show databases
 		DIR *dir;
 		struct dirent *ent;
 		char dirpath[FILENAME_MAX];
@@ -908,11 +1128,17 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		if ((dir = opendir (dirpath)) != NULL) {
 			/* print all the files and directories within directory */
 			string db;
+			int n = 0;
 			while ((ent = readdir (dir)) != NULL) {
 				db = ent->d_name;
 				//cout << db << " "<<db.find(".db",3)<<" "<<db.size()-2<<endl;
-				if(db.size()>3&&(db.substr(db.size()-3)).compare(".db")==0)
+				if(db.size()>3&&(db.substr(db.size()-3)).compare(".db")==0){
 					cout << db.substr(0,db.size()-3) << endl;
+					n++;
+				}
+			}
+			if(n==0){
+				cout << "No databases found.\n";
 			}
 			closedir (dir);
 		} else {
@@ -922,7 +1148,7 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		}
 		break;
 
-	case 12:
+	case 12:/*drop database*/
 		if(isAlpha(tokens[2])){
 			char *filepath = new char[300];
 			char dirpath[FILENAME_MAX];
@@ -935,21 +1161,183 @@ void Parser::actUpon(int ch,vector<string> tokens){
 				file.close();
 				if(remove(filepath)==0){
 					cout <<"'"<< tokens[2]<<"' dropped."<<endl;
+					//cout << dbs->dbName<<" "<<tokens[2].c_str()<<"\n";
+					if(dbs!=NULL&&tokens[2].compare(dbs->dbName)==0){
+						delete dbs;
+						dbs = NULL;
+					}
 				}else{
 					cout << "Error deleting "<<tokens[2]<<endl;
 				}
 			}else{
 				cout << "No such database exists."<<endl;
 			}
+			delete [] filepath;
 		}
 		break;
 
+	case 13://drop table
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			char tableName[100];
+
+			strcpy(tableName,tokens[2].c_str());
+
+			Table *tbl = new Table(tableName,dbs);
+			if(tbl->getDirPageHeader()==NULL){
+				cout << "Table does not exist."<<endl;
+			}else{
+				if(tbl->deleteTable()==1)
+					cout << "Table '"<<tokens[2]<<"' dropped."<<endl;
+				else
+					cout << "Error in deleting table."<<endl;
+			}
+		}
+
+		break;
+
+	case 14:/*alter table rename*/
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			char tableName[100];
+			strcpy(tableName,tokens[2].c_str());
+
+			Table *tbl = new Table(tableName,dbs);
+
+			if(tbl->getDirPageHeader()==NULL){
+				cout << "Table does not exist."<<endl;
+			}else{
+				if(tbl->alterTable(tokens[5])==1){
+					cout <<"Table '"<< tableName<<"' renamed to '"<< tokens[5]<<"'.\n";
+				}else{
+					cout << "Error in renaming the table.\n";
+				}
+			}
+
+			delete tbl;
+		}
+		break;
+	case 15:/*alter table rename column*/
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			char tableName[100];
+			strcpy(tableName,tokens[2].c_str());
+
+			Table *tbl = new Table(tableName,dbs);
+
+			if(tbl->getDirPageHeader()==NULL){
+				cout << "Table does not exist."<<endl;
+			}else{
+				if(tbl->alterTable(tokens[5],tokens[7])==1){
+					cout <<"Table '"<< tableName<<"' : column '"<<tokens[5]<<"' renamed to '"<< tokens[7]<<"'.\n";
+				}else{
+					cout << "Error in renaming the table.\n";
+				}
+			}
+
+			delete tbl;
+		}
+
+		break;
+
+	case 16:/*alter table add column*/
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			char tableName[100];
+			strcpy(tableName,tokens[2].c_str());
+
+			Table *tbl = new Table(tableName,dbs);
+			vector<int> type;
+			vector<int> maxSize;
+			vector<string> colName;
+
+			if(tbl->getDirPageHeader()==NULL){
+				cout << "Table does not exist."<<endl;
+			}else{
+				//alter table x add column cname varchar(20);
+				if(tokens[5][0]=='('){
+					cmderror;
+					return;
+				}else{
+					if(isAlpha(tokens[5])){
+						colName.push_back(tokens[5]);
+						type.push_back(atoi(findType(tokens[6]).c_str()));
+						if(tokens.size()!=7&&tokens[7][0]=='('&&tokens[9][0]==')'){
+							maxSize.push_back(atoi(tokens[8].c_str()));
+						}else{
+							maxSize.push_back(-1);
+						}
+					}
+
+					else{
+						cmderror;
+						return;
+					}
+				}
+
+
+				if(tbl->alterTable(colName,type,maxSize)==1){
+					cout <<"Column added.\n";
+				}else{
+					cout << "Error in adding the column.\n";
+				}
+			}
+			delete tbl;
+		}
+		break;
+	case 17:/*alter table drop column*/
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			char tableName[100];
+			strcpy(tableName,tokens[2].c_str());
+
+			Table *tbl = new Table(tableName,dbs);
+
+			if(tbl->getDirPageHeader()==NULL){
+				cout << "Table does not exist."<<endl;
+			}else{
+
+				if(tbl->alterTableDropColumn(tokens[5])==1){
+					cout <<"Column dropped.\n";
+				}else{
+					cout << "Error in dropping the Column.\n";
+				}
+			}
+
+			delete tbl;
+		}
+		break;
+
+	case 18://drop index;
+		//not supported yet
+                break;
+
+	case 25://show DB details
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			dbs->showDBDetails();
+		}
+		break;
+
+	case 26://delete database
+		if(dbs == NULL){
+			cout <<"No Database Loaded."<<endl;
+		}else{
+			delete dbs;
+		}
+		break;
+		break;
 
 	default:
 		cmderror;
 		break;
 	}
 }
-
 
 } /* namespace datamodels */
