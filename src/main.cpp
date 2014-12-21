@@ -36,7 +36,7 @@ bool setDataDirectory(int argc, char *argv[]){
 int main(int argc, char* argv[]){
 	string stmt;
 	string substmt;
-	Parser p;
+	Parser *parser = new Parser();
 	timeval startTime, endTime;
 	double elapsedTime;
 	char* buf = NULL;
@@ -80,6 +80,12 @@ int main(int argc, char* argv[]){
 			}
 		}//end shortcuts
 
+		if(stmt.compare("exit")==0||(stmt.compare("quit")==0)){
+			cout << "Bye!\n";
+			delete parser;
+			return 0;
+		}
+
 		while(stmt[stmt.size()-1]!=';'){
 			buf = readline("       >");
 			if(buf!=NULL&&strlen(buf)>0){
@@ -91,7 +97,7 @@ int main(int argc, char* argv[]){
 
 		add_history(stmt.c_str());
 		gettimeofday(&startTime,NULL);
-		response = p.parse(stmt);
+		response = parser->parse(stmt);
 		gettimeofday(&endTime,NULL);
 
 		if(response == 2){

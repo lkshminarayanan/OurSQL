@@ -30,8 +30,10 @@ private:
 	DataBaseServer *dbs;
 public:
 	Parser();
+	~Parser();
 	int parse(string stmt);
-	void actUpon(int ch,vector<string> token);
+	void actUpon(int ch,vector<string> token, bool requiresOpenDB, bool requiresExistingTable, int tableTokenId);
+
 	bool isAlpha(string s);
 	bool isInt(string s);
 	bool isReal(string s);

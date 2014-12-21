@@ -21,6 +21,12 @@ Parser::Parser() {
 	dbs = NULL;
 }
 
+
+Parser::~Parser() {
+	if(dbs != NULL)
+		delete dbs;
+}
+
 int Parser::str2int (string s)
 {
 	char  c;
@@ -88,8 +94,6 @@ string Parser::findType(string s){
 
 int Parser::parse(string stmt){
 
-	//std::transform(stmt.begin(), stmt.end(), stmt.begin(), ::tolower);
-
 	if((stmt.size()==0||stmt.at(stmt.size()-1)!=';')||stmt.size()<2){
 		cmderror;
 		return 1;
@@ -98,7 +102,6 @@ int Parser::parse(string stmt){
 	stringstream ss (stmt.substr(0,stmt.size()-1));
 	string item;
 	vector<string> tokens;
-
 
 	while(std::getline(ss, item))
 	{
@@ -138,17 +141,11 @@ int Parser::parse(string stmt){
 
 	try
 	{
-		if(tokens[0].compare("exit")==0||(tokens[0].compare("quit")==0)){
-			cout << endl<< "Bye!\n";
-			actUpon(0,tokens);
-			return 0;
-		}
-
-		else if(tokens.at(0).compare("create")==0){
+		if(tokens.at(0).compare("create")==0){
 
 			if(tokens.at(1).compare("database")==0){
 				if(isAlpha(tokens.at(2))&&tokens.size()==3)
-					actUpon(1,tokens);
+					actUpon(1,tokens, false, false, -1);
 				else{
 					cmderror;
 					return 1;
@@ -161,7 +158,7 @@ int Parser::parse(string stmt){
 					cmderror;
 					return 1;
 				}else
-					actUpon(4,tokens);
+					actUpon(4,tokens, true, false, -1);
 
 			}
 
@@ -175,21 +172,21 @@ int Parser::parse(string stmt){
 			if(tokens.size()>2){
 				cmderror;
 			}else{
-				actUpon(2,tokens);
+				actUpon(2,tokens, false, false, -1);
 			}
 		}
 
 		else if((tokens.at(0).compare("show")==0)){
 			if((tokens.at(1).compare("tables")==0)&&tokens.size()==2)
-				actUpon(3,tokens);
+				actUpon(3,tokens, true, false, -1);
 			else if((tokens.at(1).compare("columns")==0)&&(tokens.at(2).compare("from")==0)&&tokens.size()==4&&isAlpha(tokens.at(3))){
-				actUpon(10,tokens);
+				actUpon(10,tokens, true, true, 3);
 			}
 			else if(tokens.at(1).compare("databases")==0&&tokens.size()==2){
-				actUpon(11,tokens);
+				actUpon(11,tokens, false, false, -1);
 			}
 			else if(tokens.at(1).compare("details")==0&&tokens.size()==2){
-				actUpon(25,tokens);
+				actUpon(25,tokens, true, false, -1);
 			}
 			else{
 				cmderror;
@@ -201,30 +198,30 @@ int Parser::parse(string stmt){
 				cmderror;
 				return 1;
 			}else
-				actUpon(5,tokens);
+				actUpon(5,tokens, true, true, 2);
 		}
 
 		else if((tokens.at(0).compare("select"))==0){
-			actUpon(6,tokens);
+			actUpon(6,tokens, true, false, -1);//special case since we dont know exact table token
 			return 2;
 		}
 
 		else if((tokens.at(0).compare("delete"))==0&&(tokens.at(1).compare("from"))==0&&isAlpha(tokens.at(2))){
-			actUpon(7,tokens);
+			actUpon(7,tokens, true, true, 2);
 		}
 
 		else if((tokens.at(0).compare("update"))==0&&isAlpha(tokens.at(1))&&(tokens.at(2).compare("set"))==0){
-			actUpon(8,tokens);
+			actUpon(8,tokens, true, true, 1);
 		}
 
 		else if(tokens.size()>3&&(tokens.at(0).compare("alter"))==0&&(tokens.at(1).compare("table"))==0&&isAlpha(tokens.at(2))){
 			if(tokens.at(3).compare("rename")==0){
 				if(tokens.size()==6&&tokens.at(4).compare("to")==0&&isAlpha(tokens.at(5))){
-					actUpon(14,tokens);
+					actUpon(14,tokens, true, true, 2);
 				}
 
 				else if(tokens.size()==8&&tokens.at(4).compare("column")==0&&isAlpha(tokens.at(5))&&tokens.at(6).compare("to")==0&&isAlpha(tokens.at(7))){
-					actUpon(15,tokens);
+					actUpon(15,tokens, true, true, 2);
 				}
 
 				else{
@@ -234,11 +231,11 @@ int Parser::parse(string stmt){
 			}
 
 			else if(tokens.at(3).compare("add")==0){
-				actUpon(16,tokens);
+				actUpon(16,tokens, true, true, 2);
 			}
 
 			else if(tokens.size()==6&&tokens.at(3).compare("drop")==0&&tokens.at(4).compare("column")==0&&isAlpha(tokens.at(5))){
-				actUpon(17,tokens);
+				actUpon(17,tokens, true, true, 2);
 			}
 
 			else{
@@ -249,10 +246,10 @@ int Parser::parse(string stmt){
 
 		else if((tokens.at(0).compare("drop"))==0&&tokens.size()<6){
 			if(tokens.at(1).compare("database")==0)
-				actUpon(12,tokens);
+				actUpon(12,tokens, false, false, -1);
 
 			else if(tokens.at(1).compare("table")==0&&tokens.size()==3&&isAlpha(tokens.at(2))){
-				actUpon(13,tokens);
+				actUpon(13,tokens, true, true, 2);
 			}
 
 			else{
@@ -265,7 +262,7 @@ int Parser::parse(string stmt){
 		}
 
 		else if(tokens.size()==2&&tokens.at(0).compare("close")==0&&tokens.at(1).compare("database")==0){
-			actUpon(0,tokens);
+			actUpon(0,tokens, false, false, -1);
 			dbs = NULL;
 			cout << "Database Closed.\n";
 		}
@@ -326,7 +323,7 @@ void Parser::loadFromFile(string fileName){
 					query.append(" ");
 					query.append(trim(line));
 				}while(!sqlfile.eof()&&query[query.size()-1]!=';');
-				if(query.size()>0){
+				if(query.size()>1){
 					//cout << "=="<<query<<"==\n";
 					parse(query);
 				}
@@ -354,12 +351,10 @@ Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vec
 	vector<string>::iterator itPos;
 
 	do{
-
 		if(i+4>tokens.size()){//atleast 4 to parse
 			cmderror;
 			return NULL;
 		}
-
 
 		if(tokens[i].compare("where")==0){
 			WhereConjuction = 0;
@@ -374,7 +369,6 @@ Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vec
 			cmderror;
 			return NULL;
 		}
-
 
 		i++;
 
@@ -457,14 +451,29 @@ Where* Parser:: prepareWhere(vector<string> tokens, vector<string> colNames, vec
 	return where;
 }
 
-void Parser::actUpon(int ch,vector<string> tokens){
-	char dbName[100];
+void Parser::actUpon(int ch,vector<string> tokens, bool requiresOpenDB, bool requiresExistingTable, int tableTokenId){
 
+	if(requiresOpenDB){
+		if(dbs == NULL){
+			cout << "No Database Loaded.\n";
+			return;
+		}
+	}
+
+	char tableName[100];
+	Table *tbl = NULL;
+	if(requiresExistingTable){
+		strcpy(tableName,tokens[tableTokenId].c_str());
+		tbl = new Table(tableName,dbs);
+		if(tbl->getDirPageHeader()==NULL){
+			cout << "Table does not exist."<<endl;
+			delete tbl;
+			return;
+		}
+	}
+
+	char dbName[100];
 	switch(ch){
-	case 0:
-		if(dbs != NULL)
-			delete dbs;
-		break;
 	case 1: // create database
 		strcpy(dbName,tokens[2].c_str());
 		if(dbs != NULL)
@@ -498,628 +507,563 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		}
 		break;
 	case 3: // show tables
-		if(dbs == NULL){
-			cout << "No Database Loaded"<<endl;
-		}else{
-			dbs->showTables();
-		}
+		dbs->showTables();
 		break;
 	case 4://creating table
-		if(dbs == NULL){
-			cout << "No Database Loaded"<<endl;
-		}else{
+	{
+		int noOfattr = 0,i;
+		char *attrName;
+		vector<char*> aName;
+		vector<int> maxSize, aType;
 
-			int noOfattr = 0,i;
-			char *attrName,tableName[100];
-			vector<char*> aName;
-			vector<int> maxSize, aType;
-
-			strcpy(tableName,tokens[2].c_str());//tableName
-			//skipping next (
-			i = 4;
-			while(1){
-				//getting the column name
-				if(isAlpha(tokens[i])){
-					attrName = new char[100];
-					strcpy(attrName,tokens[i].c_str());
-					aName.push_back(attrName);
-					i++;
-				}else{
-					cout << "Invalid Column Name."<<endl;
-					return;
-				}
-				//getting type;
-				string type = findType(tokens[i]);
-				if(type.size()==1){
-					aType.push_back(str2int(type));
-					i++;
-				}else{
-					cmderror;
-					return;
-				}
-				//getting maxsize if any
-				if(tokens[i][0]=='('){
-					i++;
-					if(isInt(tokens[i])){
-						//stmt.push_back(tokens[i++]);
-						maxSize.push_back(str2int(tokens[i++]));
-						if(tokens[i++][0]!=')'){
-							cmderror;
-							return;
-						}
-					}else{
-						cmderror;
-						return;
-					}
-				}else{
-					if(type[0]=='1'){
-						cmderror;
-						return;
-					}
-					maxSize.push_back(50);
-				}
-				noOfattr++;
-				if(tokens[i][0]==','){
-					i++;
-				}else if(tokens[i][0]==')'){
-					break;//breaking while
-				}else{
-					cmderror;
-					return;
-				}
-			}
-
-			Table *tbl = new Table(tableName, aName, maxSize, aType,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Cannot create Table. Duplicate Table Name."<<endl;
-				for(unsigned i=0;i<aName.size();i++){
-					delete[] aName[i];
-				}
+		strcpy(tableName,tokens[2].c_str());//tableName
+		//skipping next (
+		i = 4;
+		while(1){
+			//getting the column name
+			if(isAlpha(tokens[i])){
+				attrName = new char[100];
+				strcpy(attrName,tokens[i].c_str());
+				aName.push_back(attrName);
+				i++;
 			}else{
-				cout << "Table '"<<tableName<<"' created."<<endl;
+				cout << "Invalid Column Name."<<endl;
+				return;
 			}
-			delete tbl;
-		}
-		break;
-	case 5://insert into
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			int noOfattr;
-			unsigned i;
-			vector<int> attrType;
-			vector<string> attrName;
-			vector<string> ipAttrNames;
-			char* tableName;
-			vector<char*> aName;
-			vector<char*> values;
-			vector<int> pos;
-			int ipNum = 0;
-			bool hasColumnNames = false;
-
-			tableName = new char[tokens[2].size() + 1];
-			strcpy(tableName,tokens[2].c_str());
-			Table *tbl = new Table(tableName,dbs);
-			delete[] tableName;
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-				delete tbl;
+			//getting type;
+			string type = findType(tokens[i]);
+			if(type.size()==1){
+				aType.push_back(str2int(type));
+				i++;
 			}else{
-				noOfattr = tbl->getNumOfAttr();
-				//cout << "Total Attributes :"<<noOfattr;
-				attrName = tbl->getAttributeNamesString();
-				attrType = tbl->getAttributeTypes();
-				i = 3;
-				if(tokens[i][0]=='('){
-
-					//start getting attribute names
-					//cout << "getting names";
-					i++;
-					do{
-						if(isAlpha(tokens[i])){
-							ipAttrNames.push_back(tokens[i]);
-							i += 2;
-						}else{
-							delete tbl;
-							cmderror;
-							return;
-						}
-					}while(tokens[i-1][0]!=')'&&tokens[i-1][0]==',');
-					hasColumnNames = true;
-
-				}
-
-				if(tokens[i].compare("values")==0){
-					if(ipAttrNames.size()==0)
-						ipAttrNames = attrName;
-					ipNum = ipAttrNames.size();
-				}else{
-					//not both?. error it is.
-					delete tbl;
-					cmderror;
-					return;
-				}
-
-				if(hasColumnNames){
-					//the column names were given
-					for(int k=0;k<ipNum;k++){
-						for(int j=0;j<noOfattr;j++){
-							if(ipAttrNames[k].compare(attrName[j])==0){
-								pos.push_back(j);
-								break;
-							}
-						}
-					}
-				}
-
-				if(hasColumnNames&&(pos.size()!=ipAttrNames.size())){
-					cout << "Invalid Column Names"<<endl;
-					delete tbl;
-					return;
-				}
-
-				RecordSet *rs = new RecordSet(attrType,noOfattr);
-				Record *r;
-				vector<string> values;
-				int k;
-				char *data;
-
-
-				i++;//skip "values"
-				do{//it comes here iff its value;
-					if(tokens[i][0]!='('){
-						delete tbl;
-						delete rs;
-						cmderror;
-						return;
-					}
-
-					values.clear();
-
-					k = 0;
-					int toklen;
-
-					do{
-						i++;
-						switch(attrType[(hasColumnNames)?pos[k]:k]){
-						case 1:
-							toklen = tokens[i].length()-1;
-							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
-								cout << "Invalid Values."<<endl;
-								delete tbl;
-								delete rs;
-								return;
-							}else{
-								tokens[i]=tokens[i].substr(1,toklen-1);
-							}
-							break;
-						case 2:
-							if(!isInt(tokens[i])){
-								cout << "Invalid Values."<<endl;
-								delete tbl;
-								delete rs;
-								return;
-							}
-							break;
-						case 3:
-							if(!isReal(tokens[i])){
-								cout << "Invalid Values."<<endl;
-								delete tbl;
-								delete rs;
-								return;
-							}
-							break;
-						default:
-							cmderror;
-							return;
-						}
-						//correct format
-						k++;
-						values.push_back(tokens[i]);
-						i++;
-					}while(tokens[i][0]==',');
-
-					if(k!=ipNum){
-						delete tbl;
-						delete rs;
-						cmderror;
-						return;
-					}
-
-					r = new Record();
-
-					if(hasColumnNames){
-						for(int j=0;j<noOfattr;j++){
-							for(k =0;k<ipNum;k++){
-								if(pos[k]==j){
-									data = new char[values[k].size()+1];
-									strcpy(data,values[k].c_str());
-									r->addValue(data,attrType[j]);
-									delete[] data;
-									break;
-								}
-							}
-							if(k==ipNum)//never went inside
-								r->addValue("",attrType[j]);
-						}
-					}else{
-						for(int j=0;j<noOfattr;j++){
-							data = new char[values[j].size()+1];
-							strcpy(data,values[j].c_str());
-							r->addValue(data,attrType[j]);
-							delete[] data;
-						}
-					}
-
-					rs->addRecord(r);
-
-					if(tokens[i++][0]!=')'){
-
-						delete tbl;
-						delete rs;
-						cmderror;
-						return;
-					}
-
-					if(i!=tokens.size()){
-						if(tokens[i++][0]!=','){
-
-							delete tbl;
-							delete rs;
-							cmderror;
-							return;
-						}
-					}else
-						break;
-
-				}while(1);
-				//rs->printAll(0,rs->getNumOfRecords());
-				cout << tbl->insertTuples(rs) << " records inserted.\n";
-
-				delete rs;
-				delete tbl;
-			}
-		}
-
-		break;
-	case 6: // select
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-
-		}else{
-			vector<string>::iterator itPos;
-			char *tableName = new char[100];
-			unsigned i;
-			vector<string> colNames;
-			vector<int> colTypes;
-			vector<int> pos;
-
-			Select *select = new Select();
-			Where *where;
-
-
-			itPos = std::find(tokens.begin(),tokens.end(),"from");
-			if(itPos ==tokens.end()){
-				//NO from.
 				cmderror;
 				return;
 			}
-			//valid from:
-			i = itPos - tokens.begin();
-
-			i++;//go to table name
-
-			if(!isAlpha(tokens.at(i))){
-				cout << "Invalid table name.\n";
-				delete[] tableName;
-				delete select;
-				return;
-			}
-
-			strcpy(tableName,tokens[i].c_str());
-
-			Table *tbl = new Table(tableName,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout <<"Table does'nt exist."<<endl;
-				delete[] tableName;
-				delete select;
-				delete tbl;
-				return;
-			}
-
-			colNames = tbl->getAttributeNamesString();
-			colTypes = tbl->getAttributeTypes();
-
-			i++;
-			if(i!=tokens.size()){//not the end
-				if(tokens[i].compare("where")==0){
-					//Where present;
-					where = prepareWhere(tokens,colNames,colTypes,i);
-					if(where == NULL){
+			//getting maxsize if any
+			if(tokens[i][0]=='('){
+				i++;
+				if(isInt(tokens[i])){
+					//stmt.push_back(tokens[i++]);
+					maxSize.push_back(str2int(tokens[i++]));
+					if(tokens[i++][0]!=')'){
+						cmderror;
 						return;
 					}
 				}else{
-					delete[] tableName;
-					delete select;
-					delete tbl;
-					return;
 					cmderror;
 					return;
 				}
 			}else{
-				where = new Where();
-			}
-
-			//where->toString();
-
-			//now for select;
-			if(tokens[1][0]=='*'){
-				if(tokens[2].compare("from")!=0){
-					//error syntax
-					delete[] tableName;
-					delete select;
-					delete tbl;
-					delete where;
+				if(type[0]=='1'){
 					cmderror;
 					return;
 				}
+				maxSize.push_back(50);
+			}
+			noOfattr++;
+			if(tokens[i][0]==','){
+				i++;
+			}else if(tokens[i][0]==')'){
+				break;//breaking while
+			}else{
+				cmderror;
+				return;
+			}
+		}
+
+		Table *tbl = new Table(tableName, aName, maxSize, aType,dbs);
+		if(tbl->getDirPageHeader()==NULL){
+			cout << "Cannot create Table. Duplicate Table Name."<<endl;
+			for(unsigned i=0;i<aName.size();i++){
+				delete[] aName[i];
+			}
+		}else{
+			cout << "Table '"<<tableName<<"' created."<<endl;
+		}
+		delete tbl;
+		break;
+	}
+	case 5://insert into
+	{
+		int noOfattr;
+		unsigned i;
+		vector<int> attrType;
+		vector<string> attrName;
+		vector<string> ipAttrNames;
+		vector<char*> aName;
+		vector<int> pos;
+		int ipNum = 0;
+		bool hasColumnNames = false;
+
+		noOfattr = tbl->getNumOfAttr();
+		//cout << "Total Attributes :"<<noOfattr;
+		attrName = tbl->getAttributeNamesString();
+		attrType = tbl->getAttributeTypes();
+		i = 3;
+		if(tokens[i][0]=='('){
+			//start getting attribute names
+			i++;
+			do{
+				if(isAlpha(tokens[i])){
+					ipAttrNames.push_back(tokens[i]);
+					i += 2;
+				}else{
+					delete tbl;
+					cmderror;
+					return;
+				}
+			}while(tokens[i-1][0]!=')'&&tokens[i-1][0]==',');
+			hasColumnNames = true;
+
+		}
+
+		if(tokens[i].compare("values")==0){
+			if(ipAttrNames.size()==0)
+				ipAttrNames = attrName;
+			ipNum = ipAttrNames.size();
+		}else{
+			//not both?. error it is.
+			delete tbl;
+			cmderror;
+			return;
+		}
+
+		if(hasColumnNames){
+			//the column names were given
+			for(int k=0;k<ipNum;k++){
+				for(int j=0;j<noOfattr;j++){
+					if(ipAttrNames[k].compare(attrName[j])==0){
+						pos.push_back(j);
+						break;
+					}
+				}
+			}
+		}
+
+		if(hasColumnNames&&(pos.size()!=ipAttrNames.size())){
+			cout << "Invalid Column Names"<<endl;
+			delete tbl;
+			return;
+		}
+
+		RecordSet *rs = new RecordSet(attrType,noOfattr);
+		Record *r;
+		vector<string> values;
+		int k;
+		char *data;
+
+
+		i++;//skip "values"
+		do{//it comes here iff its value;
+			if(tokens[i][0]!='('){
+				delete tbl;
+				delete rs;
+				cmderror;
+				return;
 			}
 
-			else if(tokens[1].compare("from")!=0){
-				i = 0;
-				int colPos = -1;
+			values.clear();
 
-				do{
-					colPos = tbl->getColumnPos(tokens[++i]);
-					//itPos = std::find(colNames.begin(),colNames.end(),tokens[++i]);
-					if(colPos == -1){
-						cout << "Invalid Column Names"<<endl;
-						delete[] tableName;
-						delete select;
+			k = 0;
+			int toklen;
+
+			do{
+				i++;
+				switch(attrType[(hasColumnNames)?pos[k]:k]){
+				case 1:
+					toklen = tokens[i].length()-1;
+					if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
+						cout << "Invalid Values."<<endl;
 						delete tbl;
-						delete where;
+						delete rs;
 						return;
 					}else{
-						pos.push_back(colPos);
+						tokens[i]=tokens[i].substr(1,toklen-1);
 					}
+					break;
+				case 2:
+					if(!isInt(tokens[i])){
+						cout << "Invalid Values."<<endl;
+						delete tbl;
+						delete rs;
+						return;
+					}
+					break;
+				case 3:
+					if(!isReal(tokens[i])){
+						cout << "Invalid Values."<<endl;
+						delete tbl;
+						delete rs;
+						return;
+					}
+					break;
+				default:
+					cmderror;
+					return;
+				}
+				//correct format
+				k++;
+				values.push_back(tokens[i]);
+				i++;
+			}while(tokens[i][0]==',');
 
-				}while(tokens[++i][0]==',');
-				if(tokens[i].compare("from")!=0){
-					delete[] tableName;
+			if(k!=ipNum){
+				delete tbl;
+				delete rs;
+				cmderror;
+				return;
+			}
+
+			r = new Record();
+
+			if(hasColumnNames){
+				for(int j=0;j<noOfattr;j++){
+					for(k =0;k<ipNum;k++){
+						if(pos[k]==j){
+							data = new char[values[k].size()+1];
+							strcpy(data,values[k].c_str());
+							r->addValue(data,attrType[j]);
+							delete[] data;
+							break;
+						}
+					}
+					if(k==ipNum)//never went inside
+						r->addValue("",attrType[j]);
+				}
+			}else{
+				for(int j=0;j<noOfattr;j++){
+					data = new char[values[j].size()+1];
+					strcpy(data,values[j].c_str());
+					r->addValue(data,attrType[j]);
+					delete[] data;
+				}
+			}
+
+			rs->addRecord(r);
+
+			if(tokens[i++][0]!=')'){
+
+				delete tbl;
+				delete rs;
+				cmderror;
+				return;
+			}
+
+			if(i!=tokens.size()){
+				if(tokens[i++][0]!=','){
+
+					delete tbl;
+					delete rs;
+					cmderror;
+					return;
+				}
+			}else
+				break;
+
+		}while(1);
+		//rs->printAll(0,rs->getNumOfRecords());
+		cout << tbl->insertTuples(rs) << " records inserted.\n";
+
+		delete rs;
+		delete tbl;
+		break;
+	}
+	case 6: // select
+	{
+		vector<string>::iterator itPos;
+		unsigned i;
+		vector<string> colNames;
+		vector<int> colTypes;
+		vector<int> pos;
+
+		Select *select = new Select();
+		Where *where;
+
+		itPos = std::find(tokens.begin(),tokens.end(),"from");
+		if(itPos ==tokens.end()){
+			//NO from.
+			cmderror;
+			return;
+		}
+		//valid from:
+		i = itPos - tokens.begin();
+
+		i++;//go to table name
+
+		if(!isAlpha(tokens.at(i))){
+			cout << "Invalid table name.\n";
+			delete select;
+			return;
+		}
+
+		strcpy(tableName,tokens[i].c_str());
+
+		Table *tbl = new Table(tableName,dbs);
+		if(tbl->getDirPageHeader()==NULL){
+			cout <<"Table does'nt exist."<<endl;
+			delete select;
+			delete tbl;
+			return;
+		}
+
+		colNames = tbl->getAttributeNamesString();
+		colTypes = tbl->getAttributeTypes();
+
+		i++;
+		if(i!=tokens.size()){//not the end
+			if(tokens[i].compare("where")==0){
+				//Where present;
+				where = prepareWhere(tokens,colNames,colTypes,i);
+				if(where == NULL){
+					return;
+				}
+			}else{
+				delete select;
+				delete tbl;
+				return;
+				cmderror;
+				return;
+			}
+		}else{
+			where = new Where();
+		}
+
+		//where->toString();
+
+		//now for select;
+		if(tokens[1][0]=='*'){
+			if(tokens[2].compare("from")!=0){
+				//error syntax
+				delete select;
+				delete tbl;
+				delete where;
+				cmderror;
+				return;
+			}
+		}
+
+		else if(tokens[1].compare("from")!=0){
+			i = 0;
+			int colPos = -1;
+
+			do{
+				colPos = tbl->getColumnPos(tokens[++i]);
+				//itPos = std::find(colNames.begin(),colNames.end(),tokens[++i]);
+				if(colPos == -1){
+					cout << "Invalid Column Names"<<endl;
 					delete select;
 					delete tbl;
 					delete where;
+					return;
+				}else{
+					pos.push_back(colPos);
+				}
+
+			}while(tokens[++i][0]==',');
+			if(tokens[i].compare("from")!=0){
+				delete select;
+				delete tbl;
+				delete where;
+				cmderror;
+				return;
+			}
+
+			delete select;//deleting the previous select.
+			select = new Select(pos,pos.size(),colTypes,colTypes.size());
+
+		}
+
+		else{
+			delete select;
+			delete tbl;
+			delete where;
+			cmderror;
+			return;
+		}
+
+		RecordSet *rs;
+
+		string choice;
+
+		do{
+			rs = tbl->selectTuples(select,where);
+
+			rs->printAll(0,rs->getNumOfRecords());
+
+			if(select->isThereMore()){
+				cout << "Get More?(Y/N) : ";
+				cin >> choice;
+			}
+
+		}while(select->isThereMore()&&(choice.at(0)=='y'||choice.at(0)=='Y'));
+
+		delete rs;
+		delete tbl;
+		delete select;
+		delete where;
+		break;
+	}
+	case 7: /*delete from x where */
+	{
+		Where *where;
+
+		vector<string> colNames;
+		vector<int> colTypes;
+
+		colNames = tbl->getAttributeNamesString();
+		colTypes = tbl->getAttributeTypes();
+
+		if(tokens.size()>3){//not the end
+			if(tokens[3].compare("where")==0){
+				//Where present;
+				where = prepareWhere(tokens,colNames,colTypes,3);
+				//where->toString();
+				if(where == NULL){
+					return;
+				}
+			}else{
+				cmderror;
+				return;
+			}
+		}else{
+			where = new Where();
+		}
+
+		cout << tbl->deleteTuples(where) <<" rows deleted."<<endl;
+
+		delete where;
+		delete tbl;
+		break;
+	}
+	case 8://modify
+	{
+		vector<string> colNames;
+		vector<int> colTypes;
+		unsigned i = 3;//update tblname set
+		int pos = -1;
+
+		colNames = tbl->getAttributeNamesString();
+		colTypes = tbl->getAttributeTypes();
+
+		int toklen;
+		char *value;
+
+		Where *where;
+		Modify *modify = new Modify(colTypes,colTypes.size());
+
+		do{
+			pos = tbl->getColumnPos(tokens[i]);
+
+			if(pos==-1){
+				cout << "Invalid Column Names."<<endl;
+			}else{
+				i++;
+				if(tokens[i][0]!='='){
 					cmderror;
 					return;
 				}
 
-				delete select;//deleting the previous select.
-				select = new Select(pos,pos.size(),colTypes,colTypes.size());
+				i++;
+				switch(colTypes[pos]){
+				case 1:
+					toklen = tokens[i].length()-1;
+					if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
+						cout << "Invalid Values."<<endl;
+						return;
+					}else{
+						tokens[i]=tokens[i].substr(1,toklen-1);
+					}
+					break;
+				case 2:
+					if(!isInt(tokens[i])){
+						cout << "Invalid Values."<<endl;
+						return;
+					}
+					break;
+				case 3:
+					if(!isReal(tokens[i])){
+						cout << "Invalid Values."<<endl;
+						return;
+					}
+					break;
+				default:
+					cmderror;
+					return;
+				}
+				value = new char[100];
+				strcpy(value,tokens[i].data());
+				modify->addUpdatedValues(value,pos);
+				delete[] value;
+			}
+			if(tokens.size()==++i){
+				break;
+			}
 
+			else if(tokens[i][0]==','){
+				i++;
+			}
+
+			else if(tokens[i].compare("where")==0){
+
+				break;
 			}
 
 			else{
-				delete[] tableName;
-				delete select;
-				delete tbl;
-				return;
-				delete where;
 				cmderror;
 				return;
 			}
 
-			RecordSet *rs;
-
-			string choice;
-
-			do{
-				rs = tbl->selectTuples(select,where);
-
-				rs->printAll(0,rs->getNumOfRecords());
-
-				if(select->isThereMore()){
-					cout << "Get More?(Y/N) : ";
-					cin >> choice;
-				}
-
-			}while(select->isThereMore()&&(choice.at(0)=='y'||choice.at(0)=='Y'));
-
-			delete rs;
-			delete tbl;
-			delete select;
-			delete where;
-			delete[] tableName;
+		}while(1);
+		if(tokens.size()!=i)
+			where = prepareWhere(tokens,colNames,colTypes,i);
+		else{
+			where = new Where();
 		}
+
+
+		cout << tbl->updateTuples(where,modify) << " records updated."<<endl;
+
+		delete where;
+		delete modify;
+		delete tbl;
 		break;
-	case 7: /*delete from x where */
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			char *tableName = new char[100];
-			strcpy(tableName,tokens[2].c_str());
-			Table *tbl = new Table(tableName,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout <<"Table does'nt exist."<<endl;
-			}else{
-
-				Where *where;
-
-				vector<string> colNames;
-				vector<int> colTypes;
-
-				colNames = tbl->getAttributeNamesString();
-				colTypes = tbl->getAttributeTypes();
-
-				if(tokens.size()>3){//not the end
-					if(tokens[3].compare("where")==0){
-						//Where present;
-						where = prepareWhere(tokens,colNames,colTypes,3);
-						//where->toString();
-						if(where == NULL){
-							return;
-						}
-					}else{
-						cmderror;
-						return;
-					}
-				}else{
-					where = new Where();
-				}
-
-				cout << tbl->deleteTuples(where) <<" rows deleted."<<endl;
-
-				delete where;
-			}
-			delete tbl;
-			delete[] tableName;
-		}
-		break;
-	case 8://modify
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			char tableName[100];
-			strcpy(tableName,tokens[1].c_str());
-			Table *tbl = new Table(tableName,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout <<"Table does'nt exist."<<endl;
-			}else{
-				vector<string> colNames;
-				vector<int> colTypes;
-				unsigned i = 3;//update tblname set
-				int pos = -1;
-
-				colNames = tbl->getAttributeNamesString();
-				colTypes = tbl->getAttributeTypes();
-
-				int toklen;
-				char *value;
-
-				Where *where;
-				Modify *modify = new Modify(colTypes,colTypes.size());
-
-				do{
-					pos = tbl->getColumnPos(tokens[i]);
-
-					if(pos==-1){
-						cout << "Invalid Column Names."<<endl;
-					}else{
-						i++;
-						if(tokens[i][0]!='='){
-							cmderror;
-							return;
-						}
-
-						i++;
-						switch(colTypes[pos]){
-						case 1:
-							toklen = tokens[i].length()-1;
-							if(tokens[i][0]!='\''||tokens[i][toklen]!='\''){
-								cout << "Invalid Values."<<endl;
-								return;
-							}else{
-								tokens[i]=tokens[i].substr(1,toklen-1);
-							}
-							break;
-						case 2:
-							if(!isInt(tokens[i])){
-								cout << "Invalid Values."<<endl;
-								return;
-							}
-							break;
-						case 3:
-							if(!isReal(tokens[i])){
-								cout << "Invalid Values."<<endl;
-								return;
-							}
-							break;
-						default:
-							cmderror;
-							return;
-						}
-						value = new char[100];
-						strcpy(value,tokens[i].data());
-						modify->addUpdatedValues(value,pos);
-						delete[] value;
-					}
-					if(tokens.size()==++i){
-						break;
-					}
-
-					else if(tokens[i][0]==','){
-						i++;
-					}
-
-					else if(tokens[i].compare("where")==0){
-
-						break;
-					}
-
-					else{
-						cmderror;
-						return;
-					}
-
-				}while(1);
-				if(tokens.size()!=i)
-					where = prepareWhere(tokens,colNames,colTypes,i);
-				else{
-					where = new Where();
-				}
-
-
-				cout << tbl->updateTuples(where,modify) << " records updated."<<endl;
-
-				delete where;
-				delete modify;
-			}
-			delete tbl;
-		}
-		break;
+	}
 	case 9://create index
 		//Not supported yet
 		break;
 
 	case 10: //show columns from tables
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			int noOfattr;
-			vector<int> attrType;
-			vector<char*> attrName;
-			char tableName[100];
+	{
+		int noOfattr;
+		vector<int> attrType;
+		vector<char*> attrName;
 
-			strcpy(tableName,tokens[3].c_str());
-			Table *tbl = new Table(tableName,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-			}else{
-				noOfattr = tbl->getNumOfAttr();
-				//cout << "Total Attributes :"<<noOfattr;
-				attrName = tbl->getAttributeNames();
-				attrType = tbl->getAttributeTypes();
-				cout << "'Columns'\t"<<"'Type'"<<endl;
-				for(int i=0;i<noOfattr;i++){
-					cout << attrName[i]<<"\t";
-					switch(attrType[i]){
-					case 1:
-						cout << "VARCHAR";
-						break;
-					case 2:
-						cout << "INT";
-						break;
-					case 3:
-						cout << "REAL";
-						break;
-					default:
-						cout << "ERROR";
-						break;
-					}
-					cout << endl;
-				}
+		noOfattr = tbl->getNumOfAttr();
+		//cout << "Total Attributes :"<<noOfattr;
+		attrName = tbl->getAttributeNames();
+		attrType = tbl->getAttributeTypes();
+		cout << "'Columns'\t"<<"'Type'"<<endl;
+		for(int i=0;i<noOfattr;i++){
+			cout << attrName[i]<<"\t";
+			switch(attrType[i]){
+			case 1:
+				cout << "VARCHAR";
+				break;
+			case 2:
+				cout << "INT";
+				break;
+			case 3:
+				cout << "REAL";
+				break;
+			default:
+				cout << "ERROR";
+				break;
 			}
+			cout << endl;
 		}
 		break;
+	}
+
 	case 11://Show databases
 		DIR *dir;
 		struct dirent *ent;
@@ -1177,161 +1121,86 @@ void Parser::actUpon(int ch,vector<string> tokens){
 		break;
 
 	case 13://drop table
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			char tableName[100];
-
-			strcpy(tableName,tokens[2].c_str());
-
-			Table *tbl = new Table(tableName,dbs);
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-			}else{
-				if(tbl->deleteTable()==1)
-					cout << "Table '"<<tokens[2]<<"' dropped."<<endl;
-				else
-					cout << "Error in deleting table."<<endl;
-			}
-		}
-
+		if(tbl->deleteTable()==1)
+			cout << "Table '"<<tokens[2]<<"' dropped."<<endl;
+		else
+			cout << "Error in deleting table."<<endl;
 		break;
 
 	case 14:/*alter table rename*/
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
+		if(tbl->alterTable(tokens[5])==1){
+			cout <<"Table '"<< tableName<<"' renamed to '"<< tokens[5]<<"'.\n";
 		}else{
-			char tableName[100];
-			strcpy(tableName,tokens[2].c_str());
-
-			Table *tbl = new Table(tableName,dbs);
-
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-			}else{
-				if(tbl->alterTable(tokens[5])==1){
-					cout <<"Table '"<< tableName<<"' renamed to '"<< tokens[5]<<"'.\n";
-				}else{
-					cout << "Error in renaming the table.\n";
-				}
-			}
-
-			delete tbl;
+			cout << "Error in renaming the table.\n";
 		}
+		delete tbl;
 		break;
+
 	case 15:/*alter table rename column*/
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
+		if(tbl->alterTable(tokens[5],tokens[7])==1){
+			cout <<"Table '"<< tableName<<"' : column '"<<tokens[5]<<"' renamed to '"<< tokens[7]<<"'.\n";
 		}else{
-			char tableName[100];
-			strcpy(tableName,tokens[2].c_str());
-
-			Table *tbl = new Table(tableName,dbs);
-
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-			}else{
-				if(tbl->alterTable(tokens[5],tokens[7])==1){
-					cout <<"Table '"<< tableName<<"' : column '"<<tokens[5]<<"' renamed to '"<< tokens[7]<<"'.\n";
-				}else{
-					cout << "Error in renaming the table.\n";
-				}
-			}
-
-			delete tbl;
+			cout << "Error in renaming the table.\n";
 		}
-
+		delete tbl;
 		break;
 
 	case 16:/*alter table add column*/
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
+	{
+		vector<int> type;
+		vector<int> maxSize;
+		vector<string> colName;
+
+		//alter table x add column cname varchar(20);
+		if(tokens[5][0]=='('){
+			cmderror;
+			return;
 		}else{
-			char tableName[100];
-			strcpy(tableName,tokens[2].c_str());
-
-			Table *tbl = new Table(tableName,dbs);
-			vector<int> type;
-			vector<int> maxSize;
-			vector<string> colName;
-
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-			}else{
-				//alter table x add column cname varchar(20);
-				if(tokens[5][0]=='('){
-					cmderror;
-					return;
+			if(isAlpha(tokens[5])){
+				colName.push_back(tokens[5]);
+				type.push_back(atoi(findType(tokens[6]).c_str()));
+				if(tokens.size()!=7&&tokens[7][0]=='('&&tokens[9][0]==')'){
+					maxSize.push_back(atoi(tokens[8].c_str()));
 				}else{
-					if(isAlpha(tokens[5])){
-						colName.push_back(tokens[5]);
-						type.push_back(atoi(findType(tokens[6]).c_str()));
-						if(tokens.size()!=7&&tokens[7][0]=='('&&tokens[9][0]==')'){
-							maxSize.push_back(atoi(tokens[8].c_str()));
-						}else{
-							maxSize.push_back(-1);
-						}
-					}
-
-					else{
-						cmderror;
-						return;
-					}
-				}
-
-
-				if(tbl->alterTable(colName,type,maxSize)==1){
-					cout <<"Column added.\n";
-				}else{
-					cout << "Error in adding the column.\n";
+					maxSize.push_back(-1);
 				}
 			}
-			delete tbl;
+
+			else{
+				cmderror;
+				return;
+			}
 		}
+
+
+		if(tbl->alterTable(colName,type,maxSize)==1){
+			cout <<"Column added.\n";
+		}else{
+			cout << "Error in adding the column.\n";
+		}
+
+		delete tbl;
 		break;
+	}
 	case 17:/*alter table drop column*/
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
+		if(tbl->alterTableDropColumn(tokens[5])==1){
+			cout <<"Column dropped.\n";
 		}else{
-			char tableName[100];
-			strcpy(tableName,tokens[2].c_str());
-
-			Table *tbl = new Table(tableName,dbs);
-
-			if(tbl->getDirPageHeader()==NULL){
-				cout << "Table does not exist."<<endl;
-			}else{
-
-				if(tbl->alterTableDropColumn(tokens[5])==1){
-					cout <<"Column dropped.\n";
-				}else{
-					cout << "Error in dropping the Column.\n";
-				}
-			}
-
-			delete tbl;
+			cout << "Error in dropping the Column.\n";
 		}
+		delete tbl;
 		break;
 
 	case 18://drop index;
 		//not supported yet
-                break;
+        break;
 
 	case 25://show DB details
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			dbs->showDBDetails();
-		}
+		dbs->showDBDetails();
 		break;
 
 	case 26://delete database
-		if(dbs == NULL){
-			cout <<"No Database Loaded."<<endl;
-		}else{
-			delete dbs;
-		}
-		break;
+		delete dbs;
 		break;
 
 	default:
